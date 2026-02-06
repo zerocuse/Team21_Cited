@@ -1,0 +1,222 @@
+:root {
+	--color-bg: #ffffff;
+	--color-bg-secondary: #fafafa;
+	--color-text: #000000;
+	--color-text-muted: #6e6e6e;
+	--color-text-light: #999999;
+	--color-accent: #ea5b10;
+	--color-accent-hover: #d14f0a;
+	--color-disabled: #f5f5f5;
+	--color-disabled-text: #cccccc;
+	--bg-gradient: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+	--bg-card: #ffffff;
+	--bg-overlay: rgba(0, 0, 0, 0.5);
+	--bg-btn: #000000;
+	--bg-btn-hover: #ea5b10;
+	--font-body: "Inter", sans-serif;
+	--font-heading: "Teko", sans-serif;
+	--font-decorative: "Caveat", cursive;
+
+	--space-xs: 4px;
+	--space-sm: 8px;
+	--space-md: 16px;
+	--space-lg: 24px;
+	--space-xl: 32px;
+	--space-2xl: 48px;
+
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 4px rgba(0, 0, 0, 0.04);
+	--shadow-md: 0 2px 4px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.06);
+	--shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.08);
+	--shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.04), 0 16px 32px rgba(0, 0, 0, 0.1);
+
+	--radius-sm: 8px;
+	--radius-md: 12px;
+	--radius-lg: 16px;
+	--radius-full: 9999px;
+
+	--transition-fast: 150ms ease;
+	--transition-normal: 250ms ease;
+}
+
+*,
+*::before,
+*::after {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	font-family: var(--font-body);
+	font-size: 15px;
+	line-height: 1.6;
+	color: var(--color-text);
+	background: var(--color-bg-secondary);
+	overflow: hidden;
+	position: relative;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: var(--font-heading);
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.search-container {
+	position: fixed;
+	top: var(--space-lg);
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 2000;
+	width: 100%;
+	max-width: 640px;
+}
+.search-upload-btn {
+	color: red;
+	background-color: transparent;
+    background-repeat: no-repeat;
+    border: none;
+    cursor: pointer;
+    overflow: hidden;
+    outline: none;
+}
+
+.search-input-group {
+	display: flex;
+	align-items: center;
+	gap: var(--space-md);
+	background: var(--color-bg);
+	border-radius: var(--radius-full);
+	padding: 14px var(--space-lg);
+	box-shadow: var(--shadow-lg);
+	transition: all var(--transition-normal);
+	max-width: 480px;
+	margin: 0 auto;
+	opacity: 0.85;
+}
+
+.search-input-group:hover {
+	max-width: 640px;
+	box-shadow: var(--shadow-xl);
+	opacity: 1;
+}
+
+.search-input-group:focus-within {
+	max-width: 640px;
+	box-shadow: var(--shadow-xl);
+	opacity: 1;
+}
+
+.search-icon {
+	flex-shrink: 0;
+	color: var(--color-text-light);
+	transition: color var(--transition-fast);
+}
+
+.search-input-group:hover .search-icon,
+.search-input-group:focus-within .search-icon {
+	color: var(--color-text);
+}
+
+.search-input {
+	flex: 1;
+	border: none;
+	outline: none;
+	font-size: 15px;
+	color: var(--color-text);
+	background: transparent;
+}
+
+.search-input::placeholder {
+	color: var(--color-text-light);
+}
+
+.search-clear {
+	flex-shrink: 0;
+	width: 28px;
+	height: 28px;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-full);
+	color: var(--color-text-muted);
+	transition: all var(--transition-fast);
+	position: relative;
+	z-index: 10;
+	cursor: pointer;
+}
+
+.search-clear:hover {
+	background: var(--color-disabled);
+	color: var(--color-text);
+}
+
+.search-clear.active {
+	display: flex !important;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+
+  max-height: 320px;
+  overflow-y: auto;
+
+  z-index: 9999;
+}
+
+.search-result {
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.search-result:last-child {
+  border-bottom: none;
+}
+
+.search-result:hover {
+  background: #f7f9fc;
+}
+
+.search-result-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111;
+  margin-bottom: 4px;
+
+  /* truncate long titles */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result-description {
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.search-empty {
+  padding: 14px;
+  text-align: center;
+  color: #888;
+  font-size: 0.85rem;
+}

@@ -61,18 +61,14 @@ def handle_upload():
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
 
-    # 1. Save file temporarily
+ 
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
 
     try:
-        # 2. Use your existing Python function
         extracted_content = extract_text(file_path)
-        
-        # 3. Clean up (optional: delete file after extraction)
         os.remove(file_path)
 
-        # 4. Return the text to React
         return jsonify({
             "message": "Success",
             "fileName": file.filename,
@@ -82,7 +78,4 @@ def handle_upload():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    if not newsData_key:
-        print("WARNING: NEWS_DATA_API key not found in .env file!")
-    
     app.run(debug=True)

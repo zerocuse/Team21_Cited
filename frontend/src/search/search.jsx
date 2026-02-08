@@ -11,7 +11,7 @@ export default function Search() {
   const [news, setNews] = useState([]);
   const [results, setResults] = useState([]);
 
-  // Fetch news data from Flask API
+
   useEffect(() => {
     fetch("http://127.0.0.1:5000/api/newsdata")
       .then((res) => res.json())
@@ -19,7 +19,7 @@ export default function Search() {
       .catch((err) => console.error("Fetch error:", err));
   }, []);
 
-  // Filter news based on search query
+  // Filter news
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
@@ -69,7 +69,6 @@ export default function Search() {
   return (
     <div className="search-container">
       <div className="search-input-group">
-        {/* Search Icon */}
         <svg className="search-icon" width="18" height="18" viewBox="0 0 20 20" fill="none">
           <path
             d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM18 18l-4.35-4.35"
@@ -79,7 +78,6 @@ export default function Search() {
           />
         </svg>
 
-        {/* Search Input */}
         <input
           type="text"
           className="search-input"
@@ -89,8 +87,6 @@ export default function Search() {
         />
 
         <UploadDoc onUploadClick={handleUploadClick}/>
-
-        {/* Hidden File Input */}
         <input
           type="file"
           ref={fileInputRef}

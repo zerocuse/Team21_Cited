@@ -196,8 +196,6 @@ h6 {
   font-weight: 600;
   color: #111;
   margin-bottom: 4px;
-
-  /* truncate long titles */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

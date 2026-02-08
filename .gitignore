@@ -1,6 +1,6 @@
 .env
 env/
-!Team21_Cited/env/include/python3.11
+
 
 /backend/__pycache__
 notes.txt

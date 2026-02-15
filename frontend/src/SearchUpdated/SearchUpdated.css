@@ -1,7 +1,6 @@
 .search-container {
   width: 100%;
   max-width: 900px;
-  margin: 20px auto;
   background: white;
   border: 2px solid var(--primary-dark-gray);
   border-radius: 20px;
@@ -16,11 +15,7 @@
   font-family: inherit;
   resize: none;
   min-height: 60px;
-  color: #333;
-}
-
-.search-input::placeholder {
-  color: #9ca3af;
+  color: var(--primary-dark-gray);
 }
 
 .search-actions {

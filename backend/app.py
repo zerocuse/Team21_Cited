@@ -4,7 +4,7 @@ from flask import Flask, request, jsonify
 import requests
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-from extract_files import extract_text
+from backend.services.extract_files import extract_text
 import certifi
 
 

@@ -1,4 +1,19 @@
 .cited-nav img {
     width: 40px;
     height: 40px;
+    filter: brightness(0%);
+}
+
+.cited-nav {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.settings-icon {
+    width: 30px !important;
+    height: 30px !important;
+    margin-bottom: 5px;
+    margin-left: 1px;
 }

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Lexend:wght@100..900&display=swap');
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -11,6 +13,14 @@
   will-change: filter;
   transition: filter 300ms;
 }
+
+.cited {
+  color: black;
+  font-family: 'Lexend', sans-serif;
+  font-weight: 900;
+  font-style: italic;
+}
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }

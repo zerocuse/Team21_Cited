@@ -5,6 +5,7 @@ import Navbar from "./Navbar"
 import Account from "./Account" // Import your Account component
 import Search from "./search/search"
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Settings from './Settings'
 
 function App() {
   return (
@@ -16,10 +17,10 @@ function App() {
           <>
             <h1 className="cited">Cited.</h1>
             <p>Your personal fact checker.</p>
-            <Search />
           </>
         } />
         <Route path="/account" element={<Account />} />
+        <Route path="/settings" element={<Settings />} />
       </Routes>
     </Router>
   )

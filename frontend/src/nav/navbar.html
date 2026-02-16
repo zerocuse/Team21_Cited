@@ -1,0 +1,27 @@
+<header className={`header ${isSticky ? "is-sticky" : ""}`} id="header">
+      <nav className="navbar container">
+        <a href="/" className="brand">Brand</a>
+        
+        <div className={`menu ${isActive ? "is-active" : ""}`} id="menu">
+          <ul className="menu-inner">
+            <li className="menu-item"><a href="#" className="menu-link" onClick={() => setIsActive(false)}>Home</a></li>
+            <li className="menu-item"><a href="#" className="menu-link" onClick={() => setIsActive(false)}>Feature</a></li>
+            <li className="menu-item"><a href="#" className="menu-link" onClick={() => setIsActive(false)}>Product</a></li>
+            <li className="menu-item"><a href="#" className="menu-link" onClick={() => setIsActive(false)}>Contact</a></li>
+          </ul>
+        </div>
+
+        <div className="menu-block">
+          <button type="button" className="btn btn-darken">Register</button>
+          <button 
+            type="button" 
+            className={`burger ${isActive ? "is-active" : ""}`} 
+            id="burger"
+            onClick={() => setIsActive(!isActive)}
+          >
+            <span className="burger-line"></span>
+            <span className="burger-line"></span>
+          </button>
+        </div>
+      </nav>
+    </header>

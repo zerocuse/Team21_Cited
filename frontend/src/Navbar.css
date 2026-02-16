@@ -17,3 +17,360 @@
     margin-bottom: 5px;
     margin-left: 1px;
 }
+
+
+
+
+
+/* --------------------- NAVBARRRRRRR__---------------- */
+        :root {
+            --bg: #030305;
+            --text-main: #ffffff;
+            --text-muted: #121419;
+            --primary: #6366f1;
+            /* Indigo */
+            --accent: #ec4899;
+            /* Pink */
+            --cyan: #06b6d4;
+
+            /* Magic Variables updated by JS */
+            --mouse-x: 50%;
+            --mouse-y: 50%;
+            --scroll-velocity: 0;
+
+            --nav-width-expanded: 1100px;
+            --nav-width-collapsed: 500px;
+
+            --ease-elastic: cubic-bezier(0.175, 0.885, 0.32, 1.15);
+            /* Springy */
+            --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+            /* Apple-like */
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 400vh;
+            margin: 0;
+            overflow-x: hidden;
+            background-image:
+                radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.08), transparent 40%),
+                radial-gradient(circle at 90% 60%, rgba(236, 72, 153, 0.08), transparent 40%);
+        }
+
+        /* --- WRAPPER FOR PERSPECTIVE --- */
+        .stage {
+            perspective: 1000px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            pointer-events: none;
+            /* Let clicks pass through outside navbar */
+        }
+
+        /* --- THE NAVBAR ITSELF --- */
+        .navbar-card {
+            position: relative;
+            left: 50%;
+            /* Complex transform for centering + physics skew */
+            transform: translateX(-50%) skewY(calc(var(--scroll-velocity) * 0.1deg));
+
+            width: 92%;
+            min-width: 100%;
+            height: 80px;
+            
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+
+            /* Glassmorphism Base */
+            background: rgb(222, 222, 222);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            
+            /* Borders handling */
+            
+            /* Base subtle border */
+
+            transition:
+                width 0.8s var(--ease-elastic),
+                height 0.8s var(--ease-elastic),
+                padding 0.8s var(--ease-elastic),
+                background 0.5s ease,
+                border-radius 0.8s var(--ease-elastic),
+                transform 0.1s linear;
+            /* Velocity skew needs instant response */
+
+            pointer-events: auto;
+            overflow: hidden;
+        }
+
+        /* --- SPOTLIGHT BORDER GLOW --- */
+        /* We use an ::after element that tracks the mouse */
+        .navbar-card::after {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            padding: 1px;
+            /* border thickness */
+            background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y),
+                    rgba(50, 100, 255, 0.4),
+                    transparent 40%);
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            opacity: 0.7;
+            transition: opacity 0.5s ease;
+        }
+
+        /* --- SCROLLED STATE (Capsule) --- */
+        body.scrolled .navbar-card {
+            top: 16px;
+            width: auto;
+            min-width: 480px;
+            max-width: var(--nav-width-collapsed);
+            height: 60px;
+            padding: 0 0.75rem;
+            border-radius: 999px;
+            background: rgba(10, 10, 14, 0.85);
+            box-shadow:
+                0 15px 35px -10px rgba(0, 0, 0, 0.8),
+                0 0 0 1px rgba(255, 255, 255, 0.08);
+            /* Slightly stronger border */
+        }
+
+        /* --- BRANDING --- */
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            width: 160px;
+            /* Fixed width to prevent jumping */
+            transition: width 0.6s var(--ease-smooth);
+        }
+
+        body.scrolled .brand-container {
+            width: 50px;
+            /* Collapse to icon size */
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: conic-gradient(from 180deg, var(--primary), var(--cyan));
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            color: black;
+            font-size: 20px;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+            transition: all 0.6s var(--ease-elastic);
+            flex-shrink: 0;
+        }
+
+        body.scrolled .logo-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            /* Circle on scroll */
+            transform: rotate(360deg);
+        }
+
+        .logo-text {
+            position: relative;
+            color: #000000;
+            font-weight: 700;
+            font-size: 30px;
+            letter-spacing: -0.02em;
+            opacity: 1;
+            left:5rem;
+            transform: translateX(0);
+            transition: all 0.5s var(--ease-smooth);
+            white-space: nowrap;
+        }
+
+        body.scrolled .logo-text {
+            opacity: 0;
+            transform: translateX(-20px);
+            pointer-events: none;
+            width: 0;
+            /* Hide effectively */
+        }
+
+        /* --- NAVIGATION LINKS --- */
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            position: relative;
+            padding: 4px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 99px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .nav-link {
+            position: relative;
+            padding: 10px 20px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 18px;
+            border-radius: 99px;
+            transition: rgb(240, 114, 114) 0.3s ease;
+            z-index: 2;
+        }
+
+        body.scrolled .nav-link {
+            padding: 8px 16px;
+            /* Smaller touch targets */
+        }
+
+        .nav-link:hover {
+            color: #fff;
+        }
+
+        .nav-indicator {
+            position: absolute;
+            top: 4px;
+            left: 5px;
+            height: calc(100% - 8px);
+            background: rgba(68, 68, 69, 0.262);
+            border: 1px solid rgba(50, 100, 255, 0.5);
+            border-radius: 99px;
+            pointer-events: none;
+            z-index: 1;
+            transition:
+                width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+                transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+                opacity 0.3s ease;
+            opacity: 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* --- ACTIONS (RIGHT SIDE) --- */
+        .actions-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-premium {
+            position: relative;
+            justify-content: center;
+            color: #000;
+            text-decoration: none;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.1s var(--ease-smooth);
+            margin-right: 50px;
+            transform-origin: center;
+            bottom: 5px;
+        }
+
+        .btn-premium:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.25);
+        }
+
+        body.scrolled .btn-premium {
+            padding: 10px 20px;
+            border-radius: 99px;
+            /* Become pill like the rest */
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        /* --- HERO SEPARATOR --- */
+        section {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding-top: 100px;
+            text-align: center;
+        }
+
+        
+
+        p {
+            max-width: 600px;
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            opacity: 0;
+            animation: slideUp 1s 0.4s forwards var(--ease-smooth);
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(40px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* --- MOBILE TOGGLE --- */
+        .mobile-toggle {
+            display: none;
+            color: white;
+            font-size: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+            }
+
+            .mobile-toggle {
+                display: block;
+            }
+
+            .btn-premium {
+                display: none;
+            }
+
+            .navbar-card {
+                width: 90%;
+                min-width: auto;
+                justify-content: space-between;
+            }
+
+            body.scrolled .navbar-card {
+                width: 92%;
+                min-width: auto;
+            }
+
+            body.scrolled .brand-container {
+                width: auto;
+            }
+
+            body.scrolled .logo-text {
+                display: none;
+            }
+        }
+
+        #acc-icon{
+            height: 30px;
+            position: relative;
+            top: 8px;
+        }

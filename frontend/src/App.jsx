@@ -9,8 +9,11 @@ import SearchUpdated from './SearchUpdated/SearchUpdated'
 function App() {
   return (
     <Router>
-      <div className="app-container">
+      <div className='navbar'>
         <Navbar />
+      </div>
+      <div className="app-container">
+        
         
         <Routes>
           <Route path="/" element={

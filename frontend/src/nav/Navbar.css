@@ -1,0 +1,294 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap");
+
+:root {
+   --color-white-100: hsl(220, 10%, 100%);
+   --color-white-200: hsl(220, 10%, 95%);
+   --color-white-300: hsl(220, 10%, 85%);
+   --color-white-400: hsl(220, 10%, 65%);
+   --color-white-500: hsl(220, 10%, 50%);
+
+   --color-black-100: hsl(240, 5%, 15%);
+   --color-black-200: hsl(240, 5%, 12%);
+   --color-black-300: hsl(240, 5%, 09%);
+   --color-black-400: hsl(240, 5%, 06%);
+   --color-black-500: hsl(240, 5%, 03%);
+
+   --shadow-small: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
+      0 1px 2px 0 rgba(0, 0, 0, 0.06);
+   --shadow-medium: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+   --shadow-large: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+*,
+*::before,
+*::after {
+   padding: 0;
+   margin: 0;
+   box-sizing: border-box;
+   list-style: none;
+   text-decoration: none;
+   -webkit-font-smoothing: antialiased;
+   -moz-osx-font-smoothing: grayscale;
+   text-rendering: optimizeLegibility;
+}
+
+html {
+   font-size: 100%;
+   scroll-behavior: smooth;
+   height: -webkit-fill-available;
+}
+
+body {
+   font-family: "Roboto", ui-sans-serif, sans-serif;
+   font-size: 1.125rem;
+   font-weight: 400;
+   line-height: 1.5;
+   color: var(--color-white-100);
+   background-color: var(--color-black-500);
+   transition: all 0.3s ease;
+}
+
+main,
+section {
+   overflow: hidden;
+}
+
+a,
+button {
+   cursor: pointer;
+   border: none;
+   outline: none;
+   color: inherit;
+   background: none;
+   box-shadow: none;
+}
+
+img,
+video {
+   display: block;
+   max-width: 100%;
+   height: auto;
+   object-fit: cover;
+}
+
+img,
+picture {
+   image-rendering: -webkit-optimize-contrast;
+   image-rendering: -moz-crisp-edges;
+   image-rendering: crisp-edges;
+}
+
+/* Layout Helpers */
+
+.section {
+   margin-inline: auto;
+   padding-block: 5rem 3rem;
+}
+
+.container {
+   max-width: 75rem;
+   margin-inline: auto;
+   padding-inline: 1.5rem;
+}
+
+.centered {
+   text-align: center;
+   vertical-align: middle;
+}
+
+.paragraph {
+   max-width: 55ch;
+}
+
+.heading {
+   font-size: clamp(2.5rem, 5vw, 4.25rem);
+   font-weight: 700;
+   line-height: 1.15;
+   text-transform: capitalize;
+}
+
+/* Buttons */
+
+.btn {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   column-gap: 0.35rem;
+   white-space: nowrap;
+   padding: 0.75rem 1.25rem;
+   border-radius: 3rem;
+   transition: all 0.3s ease;
+}
+
+.btn-darken {
+   color: var(--color-white-100);
+   background-color: var(--color-black-300);
+   box-shadow: var(--shadow-medium);
+}
+
+.btn-neutral {
+   color: var(--color-black-500);
+   background-color: var(--color-white-100);
+   box-shadow: var(--shadow-medium);
+}
+
+/* Header */
+
+.header {
+   position: fixed;
+   top: 1.5rem;
+   left: 0;
+   right: 0;
+   z-index: 99;
+   width: 100%;
+   transition: transform 0.35s ease;
+}
+
+.header.is-sticky {
+   top: 0;
+   transform: translateY(-100%);
+}
+
+/* Navbar */
+
+.navbar {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   column-gap: 2rem;
+   max-width: calc(100vw - 3rem);
+   height: 4rem;
+   border-radius: 3rem;
+   background-color: var(--color-white-100);
+   box-shadow: var(--shadow-medium);
+}
+
+.brand {
+   font-size: 1.4rem;
+   font-weight: 700;
+   letter-spacing: -1px;
+   text-transform: uppercase;
+   color: var(--color-black-500);
+}
+
+/* Menu */
+
+.menu {
+   position: fixed;
+   top: 0;
+   right: -100%;
+   width: 100%;
+   height: 100%;
+   padding-top: 25dvh;
+   background-color: var(--color-white-100);
+   box-shadow: var(--shadow-medium);
+   transition: all 0.35s ease;
+}
+
+.menu.is-active {
+   right: 0;
+}
+
+.menu-inner {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   row-gap: 1.5rem;
+}
+
+.menu-link {
+   font-size: 1.125rem;
+   font-weight: 500;
+   text-transform: uppercase;
+   color: var(--color-black-500);
+}
+
+.menu-block {
+   display: flex;
+   align-items: center;
+   column-gap: 1rem;
+}
+
+@media only screen and (min-width: 48rem) {
+   .menu {
+      position: relative;
+      right: initial;
+      width: auto;
+      height: auto;
+      padding: unset;
+      background: unset;
+      box-shadow: unset;
+   }
+
+   .menu-inner {
+      flex-direction: row;
+      column-gap: 2rem;
+   }
+
+   .menu-link {
+      font-size: 1rem;
+      text-transform: capitalize;
+   }
+}
+
+/* Burger */
+
+.burger {
+   position: relative;
+   display: block;
+   width: 1.5rem;
+   height: 1rem;
+   z-index: 99;
+}
+
+@media only screen and (min-width: 48rem) {
+   .burger {
+      display: none;
+   }
+}
+
+.burger-line {
+   position: absolute;
+   right: 0;
+   width: 100%;
+   height: 2px;
+   background-color: var(--color-black-500);
+   transition: all 0.25s ease;
+}
+
+.burger-line:nth-child(1) {
+   top: 0.25rem;
+}
+
+.burger-line:nth-child(2) {
+   top: 0.75rem;
+}
+
+.burger.is-active .burger-line:nth-child(1) {
+   top: 0.5rem;
+   transform: rotate(135deg);
+}
+
+.burger.is-active .burger-line:nth-child(2) {
+   top: 0.5rem;
+   transform: rotate(-135deg);
+}
+
+/* Wrapper */
+
+.wrapper-column {
+   display: grid;
+   align-items: center;
+   justify-content: center;
+   min-height: 90dvh;
+}
+
+.wrapper-content {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   row-gap: 2rem;
+   text-align: center;
+}

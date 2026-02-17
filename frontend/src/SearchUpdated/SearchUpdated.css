@@ -51,4 +51,11 @@
   align-items: center;
   justify-content: center;
   margin-left: auto;
+  background-color: var(--primary-dark-gray);
+  color: white;
+  transition: 100ms ease-in-out;
+}
+
+.submit-button:hover {
+  background-color: rgb(84, 84, 84);
 }

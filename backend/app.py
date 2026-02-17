@@ -3,89 +3,68 @@ import os
 from flask import Flask, request, jsonify
 import requests
 from flask_cors import CORS
-from werkzeug.utils import secure_filename
-from backend.services.extract_files import extract_text
-import certifi
-
+import spacy
 
 
 load_dotenv()
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 news_api_key = os.getenv("NEWS_API_KEY")
 newsData_key = os.getenv("NEWS_DATA_API")
 newsData_base_url = "https://newsdata.io/api/1/latest"
-@app.route("/api/newsdata")
-def newsdata():
-    search = request.args.get("search", "").lower()
+nlp = spacy.load("en_core_web_sm")
 
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_FACT_CHECK")
+GOOGLE_URL = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
+
+
+@app.route('/fact-check', methods=['POST'])
+def handle_fact_check():
+    print("Request received!") 
+    query = request.form.get('query')
+    
+    if not query:
+        return jsonify({"status": "error", "message": "No query provided"}), 400
+
+    # 1. Use spaCy to clean/shorten the query if it's too long
+    # Google API works best with concise claims (under 20 words)
+    doc = nlp(query)
+    sentences = [sent.text for sent in doc.sents]
+    search_term = sentences[0] if sentences else query
+
+    # 2. Call the real Google Fact Check API
     params = {
-        "apikey": newsData_key,
-        "language": "en",
-        "q": "breaking,politics",
-        "country": "us"
+        "query": search_term,
+        "key": GOOGLE_API_KEY,
+        "languageCode": "en"
     }
-
+    
     try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(
-    newsData_base_url,
-    params=params,
-    headers=headers,
-    verify=certifi.where()
-)
-        response.raise_for_status()
-        data = response.json().get("results", [])
-
-        if search:
-            data = [
-                item for item in data
-                if search in (item.get("title") or "").lower()
-                or search in (item.get("description") or "").lower()
-            ]
-
-        return jsonify(data)
+        response = requests.get(GOOGLE_URL, params=params)
+        response.raise_for_status() # Check for HTTP errors
+        data = response.json()
+        
+        # 3. Extract the claims from Google's response
+        # Google returns a list of 'claims', each containing 'claimReview'
+        google_claims = data.get('claims', [])
+        
+        # 4. Structure the response for your React frontend
+        results = [{
+            "original_claim": search_term,
+            "fact_checks": google_claims 
+        }]
+        
+        print(f"Found {len(google_claims)} results for: {search_term}")
+        return jsonify({"status": "success", "results": results})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
+        print(f"API Error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
-UPLOAD_FOLDER = "uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-UPLOAD_FOLDER = "uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-@app.route("/api/upload", methods=["POST"])
-def handle_upload():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
-    # Secure the filename before saving
-    filename = secure_filename(file.filename)
-    file_path = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(file_path)
-
-    try:
-        extracted_content = extract_text(file_path)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-        return jsonify({
-            "message": "Success",
-            "fileName": filename,
-            "extractedText": extracted_content
-        })
-    except Exception as e:
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

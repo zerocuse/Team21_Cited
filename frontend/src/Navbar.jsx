@@ -48,7 +48,7 @@ function Navbar() {
         <>
         <div className="stage">
             <nav className="navbar-card" ref={navRef}>
-                <Link to="/" className="brand-container">
+                <Link to="/" id="logo_link" style={{ textDecoration:'none' }}>
                     <span className="logo-text">Cited.</span>
                 </Link>
 

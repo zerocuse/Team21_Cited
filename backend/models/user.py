@@ -2,7 +2,8 @@ import re
 from typing import List
 
 class User:
-	def __init__(self, username: str, email_address: str, membership_status: str, first_name: str, last_name: str, daily_text_tokens_remaining: int, daily_file_tokens_remaining: int): """
+	def __init__(self, username: str, email_address: str, membership_status: str, first_name: str, last_name: str, daily_text_tokens_remaining: int, daily_file_tokens_remaining: int):
+		"""
 		Initialize User with all required fields and validation.
 	
 		Args:

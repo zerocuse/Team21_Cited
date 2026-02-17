@@ -2,7 +2,7 @@
 .env/
 env/
 backend/apnews.py
-
+backend/services/google_fact_chercker.py
 /backend/__pycache__
 notes.txt
 

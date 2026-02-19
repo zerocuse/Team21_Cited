@@ -9,11 +9,15 @@ from backend.services.extract_files import extract_text
 import certifi
 
 
-
-
-
 load_dotenv()
+
+
+# ============== Database Setup ==============
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL", "sqlite:///app.db")
+db = SQLAlchemy(app)
+
+
 CORS(app, resources={r"/*": {"origins": "*"}})
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 news_api_key = os.getenv("NEWS_API_KEY")

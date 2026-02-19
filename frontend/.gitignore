@@ -1,6 +1,6 @@
 .env
 ./env/*
-
+backend/services/google_fact_chercker.py
 
 # Logs
 logs

@@ -1,24 +1,20 @@
 import { Link } from "react-router-dom";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react"; 
 import "./Navbar.css";
 
 function Navbar() {
     const navRef = useRef(null);
     const indicatorRef = useRef(null); 
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [premiumOpen, setPremiumOpen] = useState(false);
 
     useEffect(() => {
         const navbar = navRef.current;
-        const indicator = indicatorRef.current;
-        if (!navbar || !indicator) return;
-
-        const handleMouseMove = (e) => {
-            const rect = navbar.getBoundingClientRect();
-            navbar.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
-            navbar.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
-        };
+        if (!navbar) return;
 
         const handleNavHover = (e) => {
-            if (e.target.classList.contains('nav-link')) {
+            const indicator = indicatorRef.current;
+            if (indicator && e.target.classList.contains('nav-link')) {
                 const linkRect = e.target.getBoundingClientRect();
                 const menuRect = e.target.parentElement.getBoundingClientRect();
                 const left = linkRect.left - menuRect.left;
@@ -30,53 +26,72 @@ function Navbar() {
         };
 
         const handleNavLeave = () => {
-            indicator.style.opacity = '0';
+            if (indicatorRef.current) indicatorRef.current.style.opacity = '0';
         };
 
-        window.addEventListener('mousemove', handleMouseMove);
         navbar.addEventListener('mouseover', handleNavHover);
         navbar.addEventListener('mouseleave', handleNavLeave);
         
         return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
             navbar.removeEventListener('mouseover', handleNavHover);
             navbar.removeEventListener('mouseleave', handleNavLeave);
         };
-    }, []);
+    }, [menuOpen]); 
 
     return (
-        <>
         <div className="stage">
             <nav className="navbar-card" ref={navRef}>
-                <Link to="/" id="logo_link" style={{ textDecoration:'none' }}>
+                
+                <div 
+                    className="nav-dropdown" 
+                    onMouseEnter={() => setMenuOpen(true)} 
+                    onMouseLeave={() => setMenuOpen(false)}
+                >
+                    <div className={`hamburger ${menuOpen ? 'open' : ''}`}>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    
+                    {menuOpen && (
+                        <div className="nav-menu">
+                            
+                            <div className="nav-indicator" ref={indicatorRef}></div>
+                            <a href="#work" className="nav-link">Work</a>
+                            <a href="#agency" className="nav-link">Agency</a>
+                            <a href="#process" className="nav-link">Process</a>
+                            <a href="#contact" className="nav-link">Contact</a>
+                        </div>
+                    )}
+                </div>
+
+                <Link to="/" id="logo_link" style={{ textDecoration: 'none' }}>
                     <span className="logo-text">Cited.</span>
                 </Link>
 
-                <div className="nav-menu">
-                    
-                    <div className="nav-indicator" ref={indicatorRef}></div>
-                    <a href="#work" className="nav-link">Work</a>
-                    <a href="#agency" className="nav-link">Agency</a>
-                    <a href="#process" className="nav-link">Process</a>
-                    <a href="#contact" className="nav-link">Contact</a>
-                </div>
-
                 <div className="actions-container">
-                    <Link to="/account" className="btn-premium"><img id="acc-icon"src="./src/assets/account_icon.svg" alt="account"/>Log In</Link>
+                    <div 
+                        className="premium-dropdown"
+                        onMouseEnter={() => setPremiumOpen(true)}
+                        onMouseLeave={() => setPremiumOpen(false)}
+                    >
+                        <div className="btn-premium">
+                            <img id="acc-icon" src="./src/assets/account_icon.svg" alt="account" />
+                            Account
+                        </div>
+                        
+                        {premiumOpen && (
+                            <div className="premium-menu">
+                                <Link to="/account" className="dropdown-item">Profile</Link>
+                                <Link to="/settings" className="dropdown-item">Settings</Link>
+                                <hr className="dropdown-divider" />
+                                <Link to="/logout" className="dropdown-item">Log Out</Link>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </nav>
         </div>
-
-        <header className="cited-nav">
-            <div className="nav-left">
-                <Link to="/"><img src="./src/assets/home_icon.svg" alt="home" /></Link>
-            </div>
-            <div className="nav-right">
-                <Link to="/account"><img src="./src/assets/account_icon.svg" alt="account"/></Link>
-                <Link to="/settings"><img src="./src/assets/settings_icon.svg" alt="settings" className="settings-icon" /></Link>
-            </div>
-        </header>
-        </>
     );
 }
 

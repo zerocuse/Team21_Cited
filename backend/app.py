@@ -1,11 +1,14 @@
 from dotenv import load_dotenv
 import os
-from flask import Flask, request, jsonify
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 import requests
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from backend.services.extract_files import extract_text
 import certifi
+
+
 
 
 

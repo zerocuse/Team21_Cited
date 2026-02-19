@@ -10,7 +10,6 @@ class KnowledgeBase:
         """Search multiple knowledge sources for a claim"""
         results = []
         results.extend(self._search_news(query, max_results=3))
-        # Add other sources...
         return results[:max_results]
     
     def _search_news(self, query, max_results=3):
@@ -18,12 +17,12 @@ class KnowledgeBase:
         Search news articles by query (not just top headlines)
         This is what you need for fact-checking!
         """
-        url = f"{self.news_base_url}/everything"  # Use 'everything' not 'top-headlines'
+        url = f"{self.news_base_url}/everything"  
         params = {
             'q': query,
             'apiKey': self.news_api_key,
             'pageSize': max_results,
-            'sortBy': 'relevancy',  # Most relevant articles first
+            'sortBy': 'relevancy', 
             'language': 'en'
         }
         

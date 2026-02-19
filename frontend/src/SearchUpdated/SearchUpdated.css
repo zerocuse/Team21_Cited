@@ -138,3 +138,115 @@
   color: #6366f1;
   text-decoration: none;
 }
+
+.verdict-summary {
+  margin-top: 1.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  border-left: 5px solid #888;
+  background: #f9f9fb;
+}
+
+.verdict-summary.verdict-true {
+  border-left-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.verdict-summary.verdict-false {
+  border-left-color: #ef4444;
+  background: #fef2f2;
+}
+
+.verdict-summary.verdict-mixed {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.verdict-summary.verdict-unrated {
+  border-left-color: #6b7280;
+  background: #f3f4f6;
+}
+
+.verdict-headline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+}
+
+.verdict-icon {
+  font-size: 1.4rem;
+}
+
+.verdict-label {
+  font-size: 1rem;
+  color: #1f2937;
+}
+
+.verdict-rating {
+  text-transform: capitalize;
+}
+
+.verdict-meta {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* ─── Rating Breakdown ─── */
+.verdict-breakdown {
+  margin-top: 0.75rem;
+}
+
+.verdict-breakdown small {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.verdict-breakdown ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.35rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.verdict-breakdown li {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #ffd1d1;
+  
+  padding: 0.2rem 0.65rem;
+  font-size: 0.8rem;
+  color: #000000;
+}
+
+.breakdown-rating {
+  text-transform: capitalize;
+}
+
+.breakdown-count {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* ─── Spinner (loading state) ─── */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

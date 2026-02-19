@@ -33,7 +33,6 @@ SHORTCUTS = {
     "liar liar pants on fire": "false",
 }
 
-# ─── Classification keyword banks ───
 FALSE_WORDS = {
     "false", "wrong", "incorrect", "fake", "fiction",
     "fabricated", "unfounded", "debunked", "bogus", "hoax"
@@ -47,7 +46,7 @@ MIXED_WORDS = {
     "exaggerated", "mixture", "unproven", "distorted", "outdated"
 }
 
-# ─── POS tags to strip (filler words) ───
+# ─── strip (filler words) ───
 STRIP_POS = {"DET", "ADP", "CCONJ", "SCONJ", "PUNCT", "PART", "INTJ", "SPACE"}
 
 
@@ -63,10 +62,10 @@ def condense_rating(rating_text):
         if key in raw:
             return val
 
-    # Parse with spaCy
+    #Spacy
     doc = nlp(raw)
 
-    # Extract meaningful tokens (skip filler POS tags and stop words)
+    # Extract meaningful tokens
     meaningful = []
     for token in doc:
         if token.pos_ in STRIP_POS:
@@ -75,12 +74,10 @@ def condense_rating(rating_text):
             continue
         meaningful.append(token)
 
-    # Priority 1: Pull adjectives with their modifier adverbs
     adjectives = [t for t in meaningful if t.pos_ == "ADJ"]
     if adjectives:
         result_tokens = []
         for token in adjectives[:2]:
-            # Check if previous token is a modifier adverb ("mostly", "partly")
             if token.i > 0:
                 prev = doc[token.i - 1]
                 if prev.pos_ == "ADV" and prev.dep_ == "advmod":
@@ -89,17 +86,14 @@ def condense_rating(rating_text):
         if result_tokens:
             return " ".join(result_tokens)
 
-    # Priority 2: Pull root noun labels ("mixture", "satire", "fiction")
     nouns = [t.text for t in meaningful if t.pos_ == "NOUN"]
     if nouns:
         return nouns[0]
 
-    # Priority 3: Pull root verb lemma ("misleads" → "mislead")
     verbs = [t.lemma_ for t in meaningful if t.pos_ == "VERB"]
     if verbs:
         return verbs[0]
 
-    # Fallback: first 2 meaningful tokens
     fallback = [t.text for t in meaningful[:2]]
     return " ".join(fallback) if fallback else raw
 
@@ -108,15 +102,13 @@ def classify_rating(condensed):
     """Classify a condensed rating into a traffic-light category."""
     words = set(condensed.lower().split())
 
-    # Exact word match first
     if words & FALSE_WORDS:
         return "false"
     if words & MIXED_WORDS:
         return "mixed"
     if words & TRUE_WORDS:
         return "true"
-
-    # Partial substring fallback
+    
     c = condensed.lower()
     if any(w in c for w in FALSE_WORDS):
         return "false"
@@ -132,8 +124,8 @@ def build_verdict(fact_checks):
     """Build an overall verdict summary from all fact-checks for one claim."""
     if not fact_checks:
         return None
-
-    condensed_map = {}  # { condensedRating: count }
+#Ratings
+    condensed_map = {}  
     total = 0
 
     for claim in fact_checks:
@@ -146,12 +138,12 @@ def build_verdict(fact_checks):
     if total == 0:
         return None
 
-    # Most frequent condensed rating wins
+    # Most frequent rating wins
     sorted_ratings = sorted(condensed_map.items(), key=lambda x: x[1], reverse=True)
     top_rating = sorted_ratings[0][0]
     category = classify_rating(top_rating)
 
-    # Build a concise summary sentence
+    #Summary 
     source_word = "source" if total == 1 else "sources"
     summaries = {
         "true": f"Rated '{top_rating}' by {total} {source_word}. Claim appears credible.",
@@ -214,10 +206,9 @@ def handle_fact_check():
             google_claims = data.get('claims', [])
 
             if google_claims:
-                # Enrich each review with condensed ratings
                 enriched_claims = enrich_reviews(google_claims)
 
-                # Build overall verdict
+                #Verdict
                 verdict = build_verdict(enriched_claims)
 
                 all_results.append({

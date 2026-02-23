@@ -3,7 +3,7 @@ from app import db
 class User(db.Model):
     __tablename__ = 'users'
 
-    userID = db.Column(db.Integer, primary_key=True)
+    userID = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
@@ -67,7 +67,7 @@ class Citation(db.Model):
     sourceID = db.Column(db.Integer, db.ForeignKey('sources.sourceID'), nullable=False)
 
     def __repr__(self):
-        return f"<Citation ClaimID {self.claimID} - SourceID {self.sourceID} - Relevance: {self.relevance_score}>"
+        return f"<Citation ClaimID {self.claimID} - SourceID {self.sourceID}>"
     
 class Tag(db.Model):
     __tablename__ = 'tag'

@@ -2,116 +2,251 @@ import { useState, useRef } from 'react';
 import './SearchUpdated.css';
 
 function SearchUpdated() {
-  const [input, setInput] = useState('');
-  const [files, setFiles] = useState([]);
-  const fileInputRef = useRef(null);
+	const [input, setInput] = useState("");
+	const [uploadedFile, setUploadedFile] = useState(null);
+	const [results, setResults] = useState([]);
+	const [isLoading, setIsLoading] = useState(false);
+	const [word_count_error, set_word_count_Error] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Submitted:', input, files);
-  };
+	const handleSubmit = async (e) => {
+		if (e) e.preventDefault();
+		const wordCount = input.trim().split(/\s+/).filter(Boolean).length;
+		const isValid = uploadedFile || wordCount >= 3;
 
-  const FILE_LIMIT = 1;
+		if (!isValid) {
+			set_word_count_Error("Minimum of 3 words to fact-check");
+			return;
+		}
+		set_word_count_Error('');
+		if (isLoading) return;
 
-  const handleFileUpload = (e) => {
-    const newFiles = Array.from(e.target.files);
-    setFiles(prev => {
-      const combined = [...prev, ...newFiles];
-      return combined.slice(0, FILE_LIMIT);
-    });
-    e.target.value = '';
-  };
+		setIsLoading(true);
+		const formData = new FormData();
+		formData.append("query", input);
+		if (uploadedFile) formData.append("file", uploadedFile);
 
-  const removeFile = (idx) => {
-    setFiles(prev => prev.filter((_, i) => i !== idx));
-  };
+		try {
+			const response = await fetch("http://127.0.0.1:5000/fact-check", {
+				method: "POST",
+				body: formData,
+			});
+			if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+			const data = await response.json();
+			setResults(data.results || []);
+		} catch (error) {
+			console.error("Fetch error:", error);
+		} finally {
+			setIsLoading(false);
+		}
+	};
 
-  const getFilePreview = (file) => {
-    if (file.type.startsWith('image/')) return URL.createObjectURL(file);
-    return null;
-  };
+	const handleInputChange = (e) => {
+		setInput(e.target.value);
+		if (word_count_error) set_word_count_Error('');
+	};
 
-  const getFileIcon = (file) => {
-    if (file.type.startsWith('image/')) return null;
-    if (file.type.includes('pdf')) return '📄';
-    if (file.type.includes('word') || file.name.endsWith('.docx')) return '📝';
-    if (file.type.includes('sheet') || file.name.endsWith('.xlsx')) return '📊';
-    return '📎';
-  };
+	const handleFileUpload = (e) => {
+		const file = e.target.files[0];
+		if (!file) return;
+		setUploadedFile(file);
+	};
 
-  return (
-    <form onSubmit={handleSubmit} className="search-form">
-      <div className="search-box">
+	const removeFile = () => {
+		setUploadedFile(null);
+		const fileInput = document.getElementById("file-upload");
+		if (fileInput) fileInput.value = "";
+	};
 
-        {/* File previews */}
-        {files.length > 0 && (
-          <>
-            <div className="file-previews">
-              {files.map((file, idx) => {
-                const preview = getFilePreview(file);
-                const icon = getFileIcon(file);
-                return (
-                  <div key={idx} className="file-chip">
-                    {preview ? (
-                      <img src={preview} alt={file.name} className="file-thumb" />
-                    ) : (
-                      <span className="file-icon">{icon}</span>
-                    )}
-                    <span className="file-name">{file.name}</span>
-                    <button
-                      type="button"
-                      className="file-remove"
-                      onClick={() => removeFile(idx)}
-                      aria-label="Remove file"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                      </svg>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-            <hr className="search-divider" />
-          </>
-        )}
+	const handleKeyDown = (e) => {
+		if (e.key === "Enter") {
+			if (!e.shiftKey) {
+				e.preventDefault();
+				handleSubmit(e);
+			}
+		}
+	};
 
-        {/* Text input */}
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a claim or input a file to be fact-checked"
-          className="search-input"
-          rows="3"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e); }
-          }}
-        />
+	const verdictIcon = (category) => {
+		switch (category) {
+			case "true":
+				return "✅";
+			case "false":
+				return "❌";
+			case "mixed":
+				return "⚠️";
+			default:
+				return "ℹ️";
+		}
+	};
 
-        {/* Actions */}
-        <div className="search-actions">
-          <label htmlFor="file-upload" className={`icon-button${files.length >= FILE_LIMIT ? ' icon-button--disabled' : ''}`} title={files.length >= FILE_LIMIT ? 'File limit reached' : 'Attach file'}>
-            <img src="./src/assets/attachment-icon.svg" alt="file-upload" className="file-upload-icon"/>
-            <input
-              id="file-upload"
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              disabled={files.length >= FILE_LIMIT}
-              style={{ display: 'none' }}
-            />
-          </label>
-          <button type="submit" className="submit-button">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="19" x2="12" y2="5"/>
-              <polyline points="5 12 12 5 19 12"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </form>
-  );
+	return (
+		<>
+			<form onSubmit={handleSubmit} className="search-container">
+				<textarea
+					value={input}
+					onChange={handleInputChange}
+					onKeyDown={handleKeyDown}
+					placeholder="Type a claim or input a file to be fact-checked"
+					className="search-input"
+					rows="3"
+				/>
+        {word_count_error && (
+    <div className="word_count"> ⚠️ {word_count_error}
+    </div>
+  )}
+				{uploadedFile && (
+					<div className="uploaded-file">
+						<span className="file-name">{uploadedFile.name}</span>
+						<button type="button" className="remove-file" onClick={removeFile}>
+							✕
+						</button>
+					</div>
+				)}
+
+				<div className="search-actions">
+					<label htmlFor="file-upload" className="icon-button">
+						<svg
+							width="20"
+							height="20"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							strokeWidth="2">
+							<rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+							<circle cx="8.5" cy="8.5" r="1.5" />
+							<polyline points="21 15 16 10 5 21" />
+						</svg>
+						<input
+							id="file-upload"
+							type="file"
+							onChange={handleFileUpload}
+							style={{ display: "none" }}
+						/>
+					</label>
+
+					<button type="button" className="icon-button">
+						<svg
+							width="20"
+							height="20"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							strokeWidth="2">
+							<polyline points="16 18 22 12 16 6" />
+							<polyline points="8 6 2 12 8 18" />
+						</svg>
+					</button>
+
+					<button type="button" className="icon-button">
+						<svg
+							width="20"
+							height="20"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							strokeWidth="2">
+							<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+							<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+						</svg>
+					</button>
+
+					<button
+						type="submit"
+						className="submit-button"
+						disabled={
+							isLoading || (!uploadedFile && input.trim().split(/\s+/).filter(Boolean).length < 3)
+						}>
+						{isLoading ? (
+							<span className="spinner" />
+						) : (
+							<svg
+								width="20"
+								height="20"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="2">
+								<line x1="12" y1="19" x2="12" y2="5" />
+								<polyline points="5 12 12 5 19 12" />
+							</svg>
+						)}
+					</button>
+				</div>
+			</form>
+
+			{/* Results */}
+			<div className="results-list">
+				{results.map((item, index) => {
+					const verdict = item.verdict;
+
+					return (
+						<div key={index} className="result-card">
+							<div className="search-term-header">
+								<small>Results for:</small>
+								<h4>{item.original_claim}</h4>
+							</div>
+
+							{item.fact_checks && item.fact_checks.length > 0 ? (
+								<>
+									{/*Summary Verdict */}
+									{verdict && (
+										<div className={`verdict-summary verdict-${verdict.category}`}>
+											<div className="verdict-headline">
+												<span className="verdict-icon">{verdictIcon(verdict.category)}</span>
+												<p className="verdict-text">{verdict.summary}</p>
+											</div>
+
+											{Object.keys(verdict.breakdown).length > 1 && (
+												<div className="verdict-breakdown">
+													<small>Breakdown:</small>
+													<ul>
+														{Object.entries(verdict.breakdown)
+															.sort((a, b) => b[1] - a[1])
+															.map(([rating, count]) => (
+																<li key={rating}>
+																	<span className="breakdown-rating">{rating}</span>
+																	<span className="breakdown-count">× {count}</span>
+																</li>
+															))}
+													</ul>
+												</div>
+											)}
+										</div>
+									)}
+									{item.fact_checks.map((claim, i) => (
+										<div key={i} className="claim-match">
+											<p className="db-claim-text">
+												<strong>Match:</strong> {claim.text}
+											</p>
+											{claim.claimReview.map((review, j) => (
+												<div key={j} className="verdict-row">
+													<span className={`rating-badge ${review.ratingCategory || "unrated"}`}>
+														{review.condensedRating || review.textualRating}
+													</span>
+													<span className="original-rating">({review.textualRating})</span>
+													<span className="publisher-name">by {review.publisher.name}</span>
+													<a
+														href={review.url}
+														target="_blank"
+														rel="noreferrer"
+														className="view-link">
+														Source
+													</a>
+												</div>
+											))}
+										</div>
+									))}
+								</>
+							) : (
+								<p className="no-results">No professional fact-checks found for this claim.</p>
+							)}
+						</div>
+					);
+				})}
+			</div>
+		</>
+	);
 }
+
 
 export default SearchUpdated;

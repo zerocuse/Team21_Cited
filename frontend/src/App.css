@@ -4,6 +4,7 @@
   /* Color Palette */
   --primary-dark-gray: #1e1e1e;
   --primary-light-gray: #d1d1d1;
+  --primary-lighter-gray: #ededed
 }
 
 #root {

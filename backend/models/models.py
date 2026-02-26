@@ -1,4 +1,28 @@
 from app import db
+import enum
+
+class SourceType(enum.Enum):
+    NEWS = "news"
+    ACADEMIC = "academic"
+    SOCIAL_MEDIA = "social media"
+    GOVERNMENT = "government"
+    OTHER = "other"
+
+class MembershipStatus(enum.Enum):
+    FREE = "free"
+    PREMIUM = "premium"
+    ADMIN = "admin"
+
+class VerificationStatus(enum.Enum):
+    TRUE = "true"
+    FALSE = "false"
+    PARTIALLY_TRUE = "partially true"
+
+class CheckedVia(enum.Enum):
+    LLM = "LLM"
+    HUMAN_EXPERT = "human expert"
+    HYBRID = "hybrid"
+    EXISTING_FACT = "existing fact"
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -7,7 +31,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    membership_status = db.Column(db.String(20), nullable=False, default='free') # can be free, premium, admin
+    membership_status = db.Column(db.Enum(MembershipStatus), nullable=False, default=MembershipStatus.FREE) # can be free, premium, admin
     creation_date = db.Column(db.DateTime, default=db.func.current_timestamp())
     first_name = db.Column(db.String(80), nullable=False)
     last_name = db.Column(db.String(80), nullable=False)
@@ -20,7 +44,7 @@ class Claim(db.Model):
 
     claimID = db.Column(db.Integer, primary_key=True)
     claim_text = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(20), nullable=True) # e.g. true, false, partially true
+    status = db.Column(db.Enum(VerificationStatus), nullable=True) # e.g. true, false, partially true
     queried_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     last_updated = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
     view_count = db.Column(db.Integer, default=0)
@@ -34,11 +58,11 @@ class FactCheck(db.Model):
     __tablename__ = 'fact_checks'
 
     factCheckID = db.Column(db.Integer, primary_key=True)
-    verdict = db.Column(db.String(20), nullable=False) # e.g. true, false, partially true
+    verdict = db.Column(db.Enum(VerificationStatus), nullable=False) # e.g. true, false, partially true
     confidence_score = db.Column(db.Float, nullable=True) # 0-100 confidence score
     explanation = db.Column(db.Text, nullable=True) # detailed explanation of the verdict
     ai_reasoning = db.Column(db.Text, nullable=True) # AI's reasoning process
-    checked_via = db.Column(db.String(50), nullable=True) # e.g. LLM, human expert, hybrid, existing fact
+    checked_via = db.Column(db.Enum(CheckedVia), nullable=True) # e.g. LLM, human expert, hybrid, existing fact
     userID = db.Column(db.Integer, db.ForeignKey('users.userID'), nullable=False)
     claimID = db.Column(db.Integer, db.ForeignKey('claims.claimID'), nullable=False)
 
@@ -52,7 +76,7 @@ class Source(db.Model):
     url = db.Column(db.String(500), nullable=False)
     title = db.Column(db.String(500), nullable=False)
     source_credibility_rating = db.Column(db.Float, nullable=True) # can be null
-    source_type = db.Column(db.String(50), nullable=False) # e.g. news, academic, social media
+    source_type = db.Column(db.Enum(SourceType), nullable=False) # uses the enum at the top of the file
     publication_date = db.Column(db.DateTime, nullable=True) # can be null
 
     def __repr__(self):
@@ -115,11 +139,11 @@ class KnowledgeBaseEntry(db.Model):
     content = db.Column(db.Text, nullable=False) # the fact-checked content
     summary = db.Column(db.Text, nullable=True) # optional summary of the content
     dateVerified = db.Column(db.DateTime, default=db.func.current_timestamp())
-    verificationStatus = db.Column(db.String(20), nullable=False) # e.g. true, false, partially true
+    verificationStatus = db.Column(db.Enum(VerificationStatus), nullable=False) # e.g. true, false, partially true
     confidenceScore = db.Column(db.Float, nullable=True) # 0-100 confidence score
 
     def __repr__(self):
-        return f"<KnowledgeBaseEntry {self.claim[:50]}... - Verdict: {self.verdict}>"
+        return f"<KnowledgeBaseEntry {self.content[:50]}... - Verdict: {self.verificationStatus}>"
 
 
     

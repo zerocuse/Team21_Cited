@@ -35,6 +35,7 @@ class User(db.Model):
     creation_date = db.Column(db.DateTime, default=db.func.current_timestamp())
     first_name = db.Column(db.String(80), nullable=False)
     last_name = db.Column(db.String(80), nullable=False)
+    profile_picture = db.Column(db.String(500), nullable=True) # URL to profile picture, can be null
 
     def __repr__(self): # will be used for debugging
         return (f"<User {self.username} ({self.email}) - Membership: {self.membership_status}>")

@@ -2,7 +2,7 @@ from models import User, db
 import re
 
 #Will put a new user into the database
-def create_user(username: str, email_address: str, membership_status: str, first_name: str, last_name: str, password_hash: str) -> User:
+def create_user(username: str, email_address: str, membership_status: str, first_name: str, last_name: str, password_hash: str, profile_picture: str = None) -> User:
 
     # Validation
     email_pattern = r'^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
@@ -25,7 +25,8 @@ def create_user(username: str, email_address: str, membership_status: str, first
         membership_status=membership_status,
         #creation_date is created automatically
         first_name=first_name,
-        last_name=last_name)
+        last_name=last_name,
+        profile_picture=profile_picture)
     
     db.session.add(new_user)
     db.session.commit()

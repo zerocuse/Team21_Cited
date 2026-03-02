@@ -1,7 +1,6 @@
 .search-container {
   position: relative;
-  
-  width: 100%;
+  width: 60%;
   max-width: 900px;
   background: white;
   border: 2px solid var(--primary-dark-gray);
@@ -93,6 +92,8 @@
   background-color: #ddd;
   color: #333;
 }
+
+
 
 .results-list {
   margin-top: 2rem;

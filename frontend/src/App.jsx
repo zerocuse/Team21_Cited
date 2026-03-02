@@ -2,6 +2,7 @@ import { useState } from 'react'
 import './App.css'
 import Navbar from "./Navbar"
 import Account from "./Account"
+import Login from "./Login"
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Settings from './Settings'
 import SearchUpdated from './SearchUpdated/SearchUpdated'
@@ -26,6 +27,7 @@ function App() {
           } />
           <Route path="/account" element={<Account />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/login" element={<Login />} />
         </Routes>
       </div>
     </Router>

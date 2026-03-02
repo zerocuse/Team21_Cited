@@ -4,6 +4,10 @@
     filter: brightness(0%);
 }
 
+.nav-right {
+    display: flex;
+}
+
 .cited-nav {
     display: flex;
     flex-direction: row;
@@ -17,4 +21,62 @@
     margin-bottom: 5px;
     margin-left: 1px;
 }
+.dropdown {
+    position: relative;
+}
 
+.dropdown-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-toggle img {
+    /* match whatever size your account icon already has */
+    width: 32px;
+    height: 32px;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    list-style: none;
+    padding: 6px 0;
+    min-width: 160px;
+    z-index: 1000;
+    animation: fadeIn 0.15s ease;
+}
+
+.dropdown-menu li a {
+    display: block;
+    padding: 10px 16px;
+    color: #333;
+    text-decoration: none;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+
+.dropdown-menu li a:hover {
+    background: #f5f5f5;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

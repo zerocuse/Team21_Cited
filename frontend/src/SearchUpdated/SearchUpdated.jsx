@@ -1,8 +1,10 @@
-import { useState, useRef } from 'react';
-import './SearchUpdated.css';
+import { useState, useRef } from "react";
+import "./SearchUpdated.css";
 
 function SearchUpdated() {
 	const [input, setInput] = useState("");
+	const [files, setFiles] = useState([]);
+  	const fileInputRef = useRef(null);
 	const [uploadedFile, setUploadedFile] = useState(null);
 	const [results, setResults] = useState([]);
 	const [isLoading, setIsLoading] = useState(false);
@@ -17,7 +19,7 @@ function SearchUpdated() {
 			set_word_count_Error("Minimum of 3 words to fact-check");
 			return;
 		}
-		set_word_count_Error('');
+		set_word_count_Error("");
 		if (isLoading) return;
 
 		setIsLoading(true);
@@ -42,7 +44,7 @@ function SearchUpdated() {
 
 	const handleInputChange = (e) => {
 		setInput(e.target.value);
-		if (word_count_error) set_word_count_Error('');
+		if (word_count_error) set_word_count_Error("");
 	};
 
 	const handleFileUpload = (e) => {
@@ -55,6 +57,20 @@ function SearchUpdated() {
 		setUploadedFile(null);
 		const fileInput = document.getElementById("file-upload");
 		if (fileInput) fileInput.value = "";
+	};
+
+	const getFilePreview = (file) => {
+		if (file.type.startsWith("image/")) return URL.createObjectURL(file);
+		return null;
+	};
+	const FILE_LIMIT = 1;
+
+	const getFileIcon = (file) => {
+		if (file.type.startsWith("image/")) return null;
+		if (file.type.includes("pdf")) return "📄";
+		if (file.type.includes("word") || file.name.endsWith(".docx")) return "📝";
+		if (file.type.includes("sheet") || file.name.endsWith(".xlsx")) return "📊";
+		return "📎";
 	};
 
 	const handleKeyDown = (e) => {
@@ -82,6 +98,40 @@ function SearchUpdated() {
 	return (
 		<>
 			<form onSubmit={handleSubmit} className="search-container">
+				{/* File previews */}
+        {files.length > 0 && (
+          <>
+            <div className="file-previews">
+              {files.map((file, idx) => {
+                const preview = getFilePreview(file);
+                const icon = getFileIcon(file);
+                return (
+                  <div key={idx} className="file-chip">
+                    {preview ? (
+                      <img src={preview} alt={file.name} className="file-thumb" />
+                    ) : (
+                      <span className="file-icon">{icon}</span>
+                    )}
+                    <span className="file-name">{file.name}</span>
+                    <button
+                      type="button"
+                      className="file-remove"
+                      onClick={() => removeFile(idx)}
+                      aria-label="Remove file"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <hr className="search-divider" />
+          </>
+        )}
+
 				<textarea
 					value={input}
 					onChange={handleInputChange}
@@ -90,10 +140,7 @@ function SearchUpdated() {
 					className="search-input"
 					rows="3"
 				/>
-        {word_count_error && (
-    <div className="word_count"> ⚠️ {word_count_error}
-    </div>
-  )}
+				{word_count_error && <div className="word_count"> ⚠️ {word_count_error}</div>}
 				{uploadedFile && (
 					<div className="uploaded-file">
 						<span className="file-name">{uploadedFile.name}</span>
@@ -114,31 +161,6 @@ function SearchUpdated() {
 						/>
 					</label>
 
-					<button type="button" className="icon-button">
-						<svg
-							width="20"
-							height="20"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2">
-							<polyline points="16 18 22 12 16 6" />
-							<polyline points="8 6 2 12 8 18" />
-						</svg>
-					</button>
-
-					<button type="button" className="icon-button">
-						<svg
-							width="20"
-							height="20"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2">
-							<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-							<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-						</svg>
-					</button>
 
 					<button
 						type="submit"
@@ -237,6 +259,5 @@ function SearchUpdated() {
 		</>
 	);
 }
-
 
 export default SearchUpdated;

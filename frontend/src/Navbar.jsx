@@ -29,34 +29,9 @@ function Navbar() {
             </div>
             <div className="nav-right">
                 <div className="dropdown" ref={dropdownRef}>
-                    <button
-                        className="dropdown-toggle"
-                        onClick={toggleDropdown}
-                        aria-expanded={dropdownOpen}
-                        aria-haspopup="true"
-                    >
-                        <img src="./src/assets/account_icon.svg" alt="account" />
-                    </button>
-                    {dropdownOpen && (
-                        <ul className="dropdown-menu">
-                            <li>
-                                <Link
-                                    to="/login"
-                                    onClick={() => setDropdownOpen(false)}
-                                >
-                                    Login
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/account"
-                                    onClick={() => setDropdownOpen(false)}
-                                >
-                                    My Account
-                                </Link>
-                            </li>
-                        </ul>
-                    )}
+                    <Link to="/account">
+                    <img src="./src/assets/account_icon.svg" alt="account" />
+                    </Link>
                 </div>
                 <Link to="/settings">
                     <img

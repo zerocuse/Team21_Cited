@@ -9,7 +9,14 @@ import spacy
 
 load_dotenv()
 app = Flask(__name__)
-CORS(app)
+CORS(
+    app,
+    resources={r"/*": {"origins": [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ]}},
+    supports_credentials=True
+)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 news_api_key = os.getenv("NEWS_API_KEY")
 newsData_key = os.getenv("NEWS_DATA_API")
@@ -20,6 +27,10 @@ nlp = spacy.load("en_core_web_sm")
 GOOGLE_API_KEY = os.getenv("GOOGLE_FACT_CHECK")
 GOOGLE_URL = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
 
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 SHORTCUTS = {
     "pants on fire": "false",

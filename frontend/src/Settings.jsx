@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import './Settings.css'
 
 function Toggle({ checked, onChange }) {
@@ -13,6 +13,10 @@ function Toggle({ checked, onChange }) {
 function Settings() {
   const [toggle1, setToggle1] = useState(false);
   const [toggle2, setToggle2] = useState(false);
+  const aboutRef = useRef();
+  const algoRef = useRef();
+  const resourcesRef = useRef();
+  const misinfoRef = useRef();
 
   return (
     <div className="settings-container">
@@ -62,9 +66,47 @@ function Settings() {
 
       <footer>
         <div className="footer-flex">
-          <a>About Cited</a><a>Resources</a><a>Misinformation Classification</a><a>How Our Algorithm Works</a>
+          <a onClick={() => aboutRef.current.showModal()} >About Cited</a>
+          <a onClick={() => resourcesRef.current.showModal()}>Resources</a>
+          <a onClick={() => misinfoRef.current.showModal()}>Misinformation Classification</a>
+          <a onClick={() => algoRef.current.showModal()}>How Our Algorithm Works</a>
         </div>
       </footer>
+
+      <dialog ref={aboutRef} className='settings-dialog'>
+        <div className="dialog-header">
+          <p>About Cited</p>
+          <button onClick={() => aboutRef.current.close()}>x</button>
+        </div>
+        <hr />
+        <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Consectetur ratione sed eveniet facilis labore. Labore amet adipisci delectus, veniam voluptates officia perferendis voluptate sunt quis asperiores deleniti minima quo inventore.</p>
+      </dialog>
+
+      <dialog ref={resourcesRef} className='settings-dialog'>
+        <div className="dialog-header">
+          <p>Resources</p>
+          <button onClick={() => resourcesRef.current.close()}>x</button>
+        </div>
+        <hr />
+        <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Consectetur ratione sed eveniet facilis labore. Labore amet adipisci delectus, veniam voluptates officia perferendis voluptate sunt quis asperiores deleniti minima quo inventore.</p>
+      </dialog>
+      <dialog ref={misinfoRef} className='settings-dialog'>
+        <div className="dialog-header">
+          <p>Misinformation Classification</p>
+          <button onClick={() => misinfoRef.current.close()}>x</button>
+        </div>
+        <hr />
+        <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Consectetur ratione sed eveniet facilis labore. Labore amet adipisci delectus, veniam voluptates officia perferendis voluptate sunt quis asperiores deleniti minima quo inventore.</p>
+      </dialog>
+
+      <dialog ref={algoRef} className='settings-dialog'>
+        <div className="dialog-header">
+          <p>How our Algorithm Works</p>
+          <button onClick={() => algoRef.current.close()}>x</button>
+        </div>
+        <hr />
+        <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Consectetur ratione sed eveniet facilis labore. Labore amet adipisci delectus, veniam voluptates officia perferendis voluptate sunt quis asperiores deleniti minima quo inventore.</p>
+      </dialog>
 
     </div>
   )

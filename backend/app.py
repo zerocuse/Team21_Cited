@@ -4,11 +4,19 @@ from flask import Flask, request, jsonify
 import requests
 from flask_cors import CORS
 import spacy
+from models import *
+from flask_sqlalchemy import SQLAlchemy
 
 
 
 load_dotenv()
 app = Flask(__name__)
+
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///factcheck.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
 CORS(
     app,
     resources={r"/*": {"origins": [
@@ -254,3 +262,8 @@ def handle_fact_check():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+
+with app.app_context():
+    db.create_all()

@@ -1,4 +1,4 @@
-from app import db
+from models import db
 import enum
 
 class SourceType(enum.Enum):

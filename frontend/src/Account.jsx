@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import './Account.css'
 
-const API = 'http://localhost:5173/auth'
+const API = 'http://127.0.0.1:5001/auth'
 
 function Account() {
   const loginRef  = useRef()

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import './Account.css'
 
 const API = 'http://127.0.0.1:5001/auth'
@@ -9,6 +9,18 @@ function Account() {
   const [user, setUser]           = useState(null)
   const [error, setError]         = useState('')
   const [loading, setLoading]     = useState(false)
+
+  // Restore session from stored token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    fetch(API + '/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => setUser(data))
+      .catch(() => localStorage.removeItem('token'))
+  }, [])
 
   const [form, setForm] = useState({
     email: '', password: '', first_name: '', last_name: '', username: ''
@@ -127,7 +139,7 @@ function Account() {
             <div className="last-name-field">{user?.last_name  || 'Last'}</div>
           </div>
           <div className="username-field">{user?.username || 'username/email'}</div>
-          <div className="subscribe-field">{user?.is_member ? '⭐ Member' : 'Subscribe'}</div>
+          <div className="subscribe-field">{(user?.membership_status === 'premium' || user?.membership_status === 'admin') ? '⭐ Member' : 'Subscribe'}</div>
         </div>
         <div className="membership-status">
           <img src="/src/assets/membership-star_icon.svg" alt="member" className="member-icon" />

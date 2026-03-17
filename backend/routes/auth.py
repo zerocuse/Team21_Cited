@@ -1,7 +1,15 @@
+import os
+import uuid
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from models.models import User, db
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+def _allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -80,3 +88,37 @@ def me():
         return jsonify({'error': 'User not found'}), 404
 
     return jsonify(user.to_dict()), 200
+
+
+@auth_bp.route('/upload-avatar', methods=['POST'])
+def upload_avatar():
+    auth_header = request.headers.get('Authorization', '')
+    token = auth_header.removeprefix('Bearer ').strip()
+    if not token:
+        return jsonify({'error': 'Missing token'}), 401
+
+    user_id = _decode_token(token)
+    if user_id is None:
+        return jsonify({'error': 'Invalid or expired token'}), 401
+
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['file']
+    if not file or file.filename == '' or not _allowed_file(file.filename):
+        return jsonify({'error': 'Invalid or missing file'}), 400
+
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    filename = f"{user_id}_{uuid.uuid4().hex}.{ext}"
+    upload_dir = os.path.join(current_app.root_path, 'static', 'avatars')
+    os.makedirs(upload_dir, exist_ok=True)
+    file.save(os.path.join(upload_dir, filename))
+
+    user.profile_picture = f"http://127.0.0.1:5001/static/avatars/{filename}"
+    db.session.commit()
+
+    return jsonify({'profile_picture': user.profile_picture}), 200

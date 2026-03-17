@@ -30,7 +30,7 @@ class User(db.Model):
     userID = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(512), nullable=False)
     membership_status = db.Column(db.Enum(MembershipStatus), nullable=False, default=MembershipStatus.FREE) # can be free, premium, admin
     creation_date = db.Column(db.DateTime, default=db.func.current_timestamp())
     first_name = db.Column(db.String(80), nullable=False)

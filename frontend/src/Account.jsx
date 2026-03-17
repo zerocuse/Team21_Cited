@@ -4,11 +4,13 @@ import './Account.css'
 const API = 'http://127.0.0.1:5001/auth'
 
 function Account() {
-  const loginRef  = useRef()
+  const loginRef     = useRef()
+  const fileInputRef = useRef()
   const [isLogin, setIsLogin]     = useState(true)
   const [user, setUser]           = useState(null)
   const [error, setError]         = useState('')
   const [loading, setLoading]     = useState(false)
+  const [avatarError, setAvatarError] = useState(false)
 
   // Restore session from stored token on mount
   useEffect(() => {
@@ -66,6 +68,33 @@ function Account() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleAvatarUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    const formData = new FormData()
+    formData.append('file', file)
+    const token = localStorage.getItem('token')
+    try {
+      const res = await fetch(API + '/upload-avatar', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      })
+      const data = await res.json()
+      console.log('upload response:', res.status, data)
+      if (res.ok) {
+        setAvatarError(false)
+        setUser(u => ({ ...u, profile_picture: data.profile_picture }))
+      } else {
+        setError(data.error || 'Upload failed')
+      }
+    } catch (err) {
+      setError('Could not reach server')
+      console.error('Avatar upload error:', err)
+    }
+    e.target.value = ''
   }
 
   function handleLogout() {
@@ -131,8 +160,30 @@ function Account() {
       </dialog>
 
       {/* ── Profile section ── */}
+      {error && !loginRef.current?.open && <p className="auth-error">{error}</p>}
       <div className="account-details-container">
-        <div className="profile-photo">icon</div>
+        <div
+          className={`profile-photo${user ? ' profile-photo--clickable' : ''}`}
+          onClick={user ? () => fileInputRef.current.click() : undefined}
+        >
+          {user?.profile_picture && !avatarError
+            ? <img
+                src={user.profile_picture}
+                alt="Profile"
+                className="profile-pic-img"
+                onError={() => setAvatarError(true)}
+              />
+            : <img src="/src/assets/account_icon.svg" alt="Profile placeholder" className="profile-pic-placeholder" />
+          }
+          {user && <div className="profile-photo-overlay">Upload</div>}
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept="image/png, image/jpeg, image/gif, image/webp"
+            onChange={handleAvatarUpload}
+          />
+        </div>
         <div className="account-details">
           <div className="account-name">
             <div className="first-name-field">{user?.first_name || 'First'}</div>

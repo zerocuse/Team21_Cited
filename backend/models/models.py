@@ -49,6 +49,7 @@ class User(db.Model):
             'last_name':        self.last_name,
             'membership_status': self.membership_status.value if self.membership_status else 'free',
             'profile_picture':  self.profile_picture,
+            'creation_date':    self.creation_date.strftime('%B %Y') if self.creation_date else None,
         }
     
 class Claim(db.Model):

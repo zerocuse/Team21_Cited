@@ -1,9 +1,27 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
-import secrets
-from models.models import User, db  # import db from your models
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+from models.models import User, db
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+TOKEN_SALT = 'auth-token'
+TOKEN_MAX_AGE = 60 * 60 * 24 * 30  # 30 days
+
+
+def _make_token(user_id):
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    return s.dumps(user_id, salt=TOKEN_SALT)
+
+
+def _decode_token(token):
+    """Returns user_id int or None if invalid/expired."""
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    try:
+        return s.loads(token, salt=TOKEN_SALT, max_age=TOKEN_MAX_AGE)
+    except (SignatureExpired, BadSignature):
+        return None
+
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -29,17 +47,9 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
-    token = secrets.token_hex(32)  # swap for JWT later if needed
+    token = _make_token(new_user.userID)
+    return jsonify({'token': token, 'user': new_user.to_dict()}), 201
 
-    return jsonify({
-        'token': token,
-        'user': {
-            'first_name': new_user.first_name,
-            'last_name': new_user.last_name,
-            'username': new_user.username,
-            'membership_status': new_user.membership_status,
-        }
-    }), 201
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -49,14 +59,24 @@ def login():
     if not user or not check_password_hash(user.password_hash, data.get('password', '')):
         return jsonify({'error': 'Invalid email or password'}), 401
 
-    token = secrets.token_hex(32)
+    token = _make_token(user.userID)
+    return jsonify({'token': token, 'user': user.to_dict()}), 200
 
-    return jsonify({
-        'token': token,
-        'user': {
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'username': user.username,
-            'is_member': user.is_member.value,
-        }
-    }), 200
+
+@auth_bp.route('/me', methods=['GET'])
+def me():
+    auth_header = request.headers.get('Authorization', '')
+    token = auth_header.removeprefix('Bearer ').strip()
+
+    if not token:
+        return jsonify({'error': 'Missing token'}), 401
+
+    user_id = _decode_token(token)
+    if user_id is None:
+        return jsonify({'error': 'Invalid or expired token'}), 401
+
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    return jsonify(user.to_dict()), 200

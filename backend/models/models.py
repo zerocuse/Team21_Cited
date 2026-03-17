@@ -39,6 +39,17 @@ class User(db.Model):
 
     def __repr__(self): # will be used for debugging
         return (f"<User {self.username} ({self.email}) - Membership: {self.membership_status}>")
+
+    def to_dict(self):
+        return {
+            'id':               self.userID,
+            'username':         self.username,
+            'email':            self.email,
+            'first_name':       self.first_name,
+            'last_name':        self.last_name,
+            'membership_status': self.membership_status.value if self.membership_status else 'free',
+            'profile_picture':  self.profile_picture,
+        }
     
 class Claim(db.Model):
     __tablename__ = 'claims'

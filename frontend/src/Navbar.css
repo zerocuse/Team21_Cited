@@ -6,6 +6,8 @@
 
 .nav-right {
     display: flex;
+    align-items: center;
+    gap: .25rem;
 }
 
 .cited-nav {

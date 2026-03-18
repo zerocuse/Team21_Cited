@@ -4,11 +4,23 @@ from flask import Flask, request, jsonify
 import requests
 from flask_cors import CORS
 import spacy
+from models import *
+from flask_sqlalchemy import SQLAlchemy
+
 
 
 
 load_dotenv()
 app = Flask(__name__)
+
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///factcheck.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-change-in-production')
+
+
+db.init_app(app)
+
 CORS(
     app,
     resources={r"/*": {"origins": [
@@ -17,6 +29,12 @@ CORS(
     ]}},
     supports_credentials=True
 )
+
+# Register auth blueprint
+from routes.auth import auth_bp
+app.register_blueprint(auth_bp)
+
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 news_api_key = os.getenv("NEWS_API_KEY")
 newsData_key = os.getenv("NEWS_DATA_API")
@@ -253,4 +271,9 @@ def handle_fact_check():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    with app.app_context():
+        db.create_all()
+        #from services.seed_admins import seed_admins
+        #seed_admins()
+    app.run(debug=True, port=5001)
+

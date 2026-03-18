@@ -1,4 +1,4 @@
-from app import db
+from models import db
 import enum
 
 class SourceType(enum.Enum):
@@ -30,7 +30,7 @@ class User(db.Model):
     userID = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(512), nullable=False)
     membership_status = db.Column(db.Enum(MembershipStatus), nullable=False, default=MembershipStatus.FREE) # can be free, premium, admin
     creation_date = db.Column(db.DateTime, default=db.func.current_timestamp())
     first_name = db.Column(db.String(80), nullable=False)
@@ -39,6 +39,18 @@ class User(db.Model):
 
     def __repr__(self): # will be used for debugging
         return (f"<User {self.username} ({self.email}) - Membership: {self.membership_status}>")
+
+    def to_dict(self):
+        return {
+            'id':               self.userID,
+            'username':         self.username,
+            'email':            self.email,
+            'first_name':       self.first_name,
+            'last_name':        self.last_name,
+            'membership_status': self.membership_status.value if self.membership_status else 'free',
+            'profile_picture':  self.profile_picture,
+            'creation_date':    self.creation_date.strftime('%B %Y') if self.creation_date else None,
+        }
     
 class Claim(db.Model):
     __tablename__ = 'claims'

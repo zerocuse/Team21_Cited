@@ -273,7 +273,7 @@ def handle_fact_check():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-        #from services.seed_admins import seed_admins
-        #seed_admins()
+        from services.seed_admins import seed_admins
+        seed_admins()
     app.run(debug=True, port=5001)
 

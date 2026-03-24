@@ -65,7 +65,15 @@ class Claim(db.Model):
 
     def __repr__(self):
         return f"<Claim {self.claim_text[:50]}... - Status: {self.status}>"
-    
+
+    def to_dict(self):
+        return {
+            'id':         self.claimID,
+            'claim_text': self.claim_text,
+            'status':     self.status.value if self.status else None,
+            'queried_at': self.queried_at.strftime('%b %d, %Y') if self.queried_at else None,
+        }
+
 
 class FactCheck(db.Model):
     __tablename__ = 'fact_checks'

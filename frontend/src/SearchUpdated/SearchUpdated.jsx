@@ -1,6 +1,14 @@
 import { useState, useRef } from "react";
 import "./SearchUpdated.css";
 
+function getSettings() {
+	try {
+		return JSON.parse(localStorage.getItem('cited_settings') || '{}')
+	} catch {
+		return {}
+	}
+}
+
 function SearchUpdated() {
 	const [input, setInput] = useState("");
 	const [files, setFiles] = useState([]);
@@ -9,14 +17,17 @@ function SearchUpdated() {
 	const [results, setResults] = useState([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [word_count_error, set_word_count_Error] = useState("");
+	const resultsRef = useRef(null);
 
 	const handleSubmit = async (e) => {
 		if (e) e.preventDefault();
+		const s = getSettings();
+		const minWords = s.minWordCount ?? 3;
 		const wordCount = input.trim().split(/\s+/).filter(Boolean).length;
-		const isValid = uploadedFile || wordCount >= 3;
+		const isValid = uploadedFile || wordCount >= minWords;
 
 		if (!isValid) {
-			set_word_count_Error("Minimum of 3 words to fact-check");
+			set_word_count_Error(`Minimum of ${minWords} word${minWords === 1 ? '' : 's'} to fact-check`);
 			return;
 		}
 		set_word_count_Error("");
@@ -25,6 +36,7 @@ function SearchUpdated() {
 		setIsLoading(true);
 		const formData = new FormData();
 		formData.append("query", input);
+		formData.append("fact_check_method", s.factCheckMethod ?? 'web-scrape');
 		if (uploadedFile) formData.append("file", uploadedFile);
 
 		try {
@@ -37,6 +49,9 @@ function SearchUpdated() {
 			if (!response.ok) throw new Error(`Server responded with ${response.status}`);
 			const data = await response.json();
 			setResults(data.results || []);
+			if ((s.autoScroll ?? false) && resultsRef.current) {
+				setTimeout(() => resultsRef.current.scrollIntoView({ behavior: 'smooth' }), 100);
+			}
 		} catch (error) {
 			console.error("Fetch error:", error);
 		} finally {
@@ -163,12 +178,11 @@ function SearchUpdated() {
 						/>
 					</label>
 
-
 					<button
 						type="submit"
 						className="submit-button"
 						disabled={
-							isLoading || (!uploadedFile && input.trim().split(/\s+/).filter(Boolean).length < 3)
+							isLoading || (!uploadedFile && input.trim().split(/\s+/).filter(Boolean).length < (getSettings().minWordCount ?? 3))
 						}>
 						{isLoading ? (
 							<span className="spinner" />
@@ -189,9 +203,11 @@ function SearchUpdated() {
 			</form>
 
 			{/* Results */}
-			<div className="results-list">
+			<div className="results-list" ref={resultsRef}>
 				{results.map((item, index) => {
+					const s = getSettings();
 					const verdict = item.verdict;
+					const factChecks = (item.fact_checks || []).slice(0, s.resultsPerClaim ?? 5);
 
 					return (
 						<div key={index} className="result-card">
@@ -200,7 +216,7 @@ function SearchUpdated() {
 								<h4>{item.original_claim}</h4>
 							</div>
 
-							{item.fact_checks && item.fact_checks.length > 0 ? (
+							{factChecks.length > 0 ? (
 								<>
 									{/*Summary Verdict */}
 									{verdict && (
@@ -210,7 +226,7 @@ function SearchUpdated() {
 												<p className="verdict-text">{verdict.summary}</p>
 											</div>
 
-											{Object.keys(verdict.breakdown).length > 1 && (
+											{(s.showBreakdown ?? true) && Object.keys(verdict.breakdown).length > 1 && (
 												<div className="verdict-breakdown">
 													<small>Breakdown:</small>
 													<ul>
@@ -227,7 +243,7 @@ function SearchUpdated() {
 											)}
 										</div>
 									)}
-									{item.fact_checks.map((claim, i) => (
+									{factChecks.map((claim, i) => (
 										<div key={i} className="claim-match">
 											<p className="db-claim-text">
 												<strong>Match:</strong> {claim.text}
@@ -239,13 +255,15 @@ function SearchUpdated() {
 													</span>
 													<span className="original-rating">({review.textualRating})</span>
 													<span className="publisher-name">by {review.publisher.name}</span>
-													<a
-														href={review.url}
-														target="_blank"
-														rel="noreferrer"
-														className="view-link">
-														Source
-													</a>
+													{(s.showSourceLinks ?? true) && (
+														<a
+															href={review.url}
+															target="_blank"
+															rel="noreferrer"
+															className="view-link">
+															Source
+														</a>
+													)}
 												</div>
 											))}
 										</div>

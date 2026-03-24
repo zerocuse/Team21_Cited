@@ -220,6 +220,14 @@ def handle_fact_check():
     if not query:
         return jsonify({"status": "error", "message": "No query"}), 400
 
+    # Try to identify the logged-in user from the token
+    from routes.auth import _decode_token
+    from services.claim_service import create_claim
+
+    auth_header = request.headers.get('Authorization', '')
+    token = auth_header.removeprefix('Bearer ').strip()
+    user_id = _decode_token(token) if token else None
+
     query = " ".join(query.split())
     doc = nlp(query)
     relevant_sentences = [sent.text.strip() for sent in doc.sents if is_relevant_claim(sent)]
@@ -228,7 +236,6 @@ def handle_fact_check():
 
     all_results = []
 
-    # Limit to 4 checks to avoid API timeouts
     for search_term in relevant_sentences[:4]:
         params = {
             "query": search_term,
@@ -243,10 +250,7 @@ def handle_fact_check():
 
             if google_claims:
                 enriched_claims = enrich_reviews(google_claims)
-
-                #Verdict
                 verdict = build_verdict(enriched_claims)
-
                 all_results.append({
                     "original_claim": search_term,
                     "fact_checks": enriched_claims,
@@ -266,6 +270,13 @@ def handle_fact_check():
                 "verdict": None,
                 "error": str(e)
             })
+
+    # Save to DB if user is logged in
+    if user_id:
+        try:
+            create_claim(query, user_id)
+        except Exception as e:
+            print(f"Failed to save claim: {e}")
 
     return jsonify({"status": "success", "results": all_results})
 

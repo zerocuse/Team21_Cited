@@ -28,9 +28,11 @@ function SearchUpdated() {
 		if (uploadedFile) formData.append("file", uploadedFile);
 
 		try {
+			const token = localStorage.getItem('token');
 			const response = await fetch("http://127.0.0.1:5001/fact-check", {
 				method: "POST",
-				body: formData,
+    			headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+    			body: formData,
 			});
 			if (!response.ok) throw new Error(`Server responded with ${response.status}`);
 			const data = await response.json();

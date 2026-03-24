@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-from models.models import User, db
+from models.models import User, Claim, db
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
@@ -122,3 +122,23 @@ def upload_avatar():
     db.session.commit()
 
     return jsonify({'profile_picture': user.profile_picture}), 200
+
+
+@auth_bp.route('/history', methods=['GET'])
+def history():
+    auth_header = request.headers.get('Authorization', '')
+    token = auth_header.removeprefix('Bearer ').strip()
+    if not token:
+        return jsonify({'error': 'Missing token'}), 401
+
+    user_id = _decode_token(token)
+    if user_id is None:
+        return jsonify({'error': 'Invalid or expired token'}), 401
+
+    claims = (
+        db.session.query(Claim)
+        .filter_by(userID=user_id)
+        .order_by(Claim.queried_at.desc())
+        .all()
+    )
+    return jsonify([c.to_dict() for c in claims]), 200

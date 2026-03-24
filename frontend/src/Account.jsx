@@ -14,13 +14,19 @@ function Account() {
   const [loading, setLoading]         = useState(false)
   const [avatarError, setAvatarError] = useState(false)
   const [authReady, setAuthReady]     = useState(false)
+  const [history, setHistory]         = useState([])
 
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) { setAuthReady(true); return }
     fetch(API + '/me', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then(data => setUser(data))
+      .then(data => {
+        setUser(data)
+        return fetch(API + '/history', { headers: { 'Authorization': `Bearer ${token}` } })
+      })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setHistory(data))
       .catch(() => localStorage.removeItem('token'))
       .finally(() => setAuthReady(true))
   }, [])
@@ -189,11 +195,11 @@ function Account() {
 
             {/* Info */}
             <div className="profile-info">
-              <div className="profile-name-row">
-                <span className="profile-fullname">{user.first_name} {user.last_name}</span>
-                <span className={`membership-badge membership-badge--${user.membership_status}`}>
-                  {BADGE_LABEL[user.membership_status] ?? user.membership_status}
-                </span>
+              <div className="name-and-member">
+              <span className="profile-fullname">{user.first_name} {user.last_name}</span>
+              <span className={`membership-badge membership-badge--${user.membership_status}`}>
+                {BADGE_LABEL[user.membership_status] ?? user.membership_status}
+              </span>
               </div>
               <span className="profile-username">@{user.username}</span>
 
@@ -216,9 +222,30 @@ function Account() {
           <div className="history-section">
             <h3 className="history-header">History</h3>
             <div className="history-container">
-              {['prev1', 'prev2', 'prev3', 'prev4', 'prev5'].map(p => (
-                <div key={p} className="history-placeholder">{p}</div>
-              ))}
+              {history.length === 0
+                ? <p style={{ color: '#aaa', fontSize: '0.9rem' }}>No queries yet.</p>
+                : history.map(item => (
+                  <div key={item.id} className="history-placeholder">
+                    <p style={{ fontWeight: 600, color: '#333', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+                      {item.claim_text.length > 100 ? item.claim_text.slice(0, 100) + '…' : item.claim_text}
+                    </p>
+                    {item.status && (
+                      <span style={{
+                        fontSize: '0.75rem',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        background: item.status === 'true' ? '#d4edda' : item.status === 'false' ? '#f8d7da' : '#fff3cd',
+                        color: item.status === 'true' ? '#155724' : item.status === 'false' ? '#721c24' : '#856404',
+                      }}>
+                        {item.status}
+                      </span>
+                    )}
+                    {item.queried_at && (
+                      <p style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '0.5rem' }}>{item.queried_at}</p>
+                    )}
+                  </div>
+                ))
+              }
             </div>
           </div>
         </div>

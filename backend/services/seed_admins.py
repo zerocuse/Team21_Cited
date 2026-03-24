@@ -1,6 +1,7 @@
 from models import db
 from models.models import MembershipStatus, User
 from app import app
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 # ── Team Member Admin Accounts ─────────────────────────────────────────────────
@@ -14,7 +15,7 @@ ADMIN_USERS = [
         "first_name": "Adam",
         "last_name": "Knell",
         "membership_status":MembershipStatus.ADMIN,
-        "password": "password",
+        "password": generate_password_hash("password!"),
     },
     {
         "username": "zachgrande",
@@ -22,7 +23,7 @@ ADMIN_USERS = [
         "first_name": "Zach",
         "last_name": "Grande",
         "membership_status":MembershipStatus.ADMIN,
-        "password": "password!",
+        "password": generate_password_hash("password!"),
     },
     {
         "username": "katiesucks",
@@ -30,7 +31,7 @@ ADMIN_USERS = [
         "first_name": "Katie",
         "last_name": "Matulac",
         "membership_status":MembershipStatus.ADMIN,
-        "password": "password!",
+        "password": generate_password_hash("password!"),
     },
     {
         "username": "adonyarko",
@@ -38,7 +39,7 @@ ADMIN_USERS = [
         "first_name": "Adomako",
         "last_name": "Nyarko",
         "membership_status":MembershipStatus.ADMIN,
-        "password": "password!",
+        "password": generate_password_hash("password!"),
     },
     {
         "username": "joewac",
@@ -46,7 +47,7 @@ ADMIN_USERS = [
         "first_name": "Joe",
         "last_name": "Wac",
         "membership_status":MembershipStatus.FREE,
-        "password": "password!",
+        "password": generate_password_hash("password!"),
     },
 ]
 

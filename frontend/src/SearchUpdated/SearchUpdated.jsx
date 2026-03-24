@@ -28,7 +28,7 @@ function SearchUpdated() {
 		if (uploadedFile) formData.append("file", uploadedFile);
 
 		try {
-			const response = await fetch("http://127.0.0.1:5000/fact-check", {
+			const response = await fetch("http://127.0.0.1:5001/fact-check", {
 				method: "POST",
 				body: formData,
 			});

@@ -1,4 +1,49 @@
 import { useEffect, useState } from "react";
+function CreateUserForm({ onUserCreated }) {
+  const [form, setForm] = useState({
+    username: "", email: "", first_name: "", last_name: "", membership_status: "Free"
+  });
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = () => {
+    if (!form.username || !form.email || !form.first_name || !form.last_name) {
+      setError("All fields are required.");
+      return;
+    }
+    fetch("/api/admin/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        onUserCreated(data.message);
+        setForm({ username: "", email: "", first_name: "", last_name: "", membership_status: "Free" });
+        setError("");
+      });
+  };
+
+  return (
+    <div className="create-user-form">
+      <h3>Create New User</h3>
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      <input name="username" placeholder="Username" value={form.username} onChange={handleChange} />
+      <input name="email" placeholder="Email" value={form.email} onChange={handleChange} />
+      <input name="first_name" placeholder="First Name" value={form.first_name} onChange={handleChange} />
+      <input name="last_name" placeholder="Last Name" value={form.last_name} onChange={handleChange} />
+      <select name="membership_status" value={form.membership_status} onChange={handleChange}>
+        <option value="Free">Free</option>
+        <option value="Premium">Premium</option>
+        <option value="Admin">Admin</option>
+      </select>
+      <button onClick={handleSubmit}>Create User</button>
+    </div>
+  );
+}
 
 function Admin() {
   const [users, setUsers] = useState([]);
@@ -57,6 +102,7 @@ function Admin() {
           </div>
         ))
       )}
+      <CreateUserForm onUserCreated={(msg) => setMessage(msg)} />
     </div>
   );
 }

@@ -44,3 +44,21 @@ def delete_user(user_id):
     admin = get_admin()
     result = admin.delete_user(user_id)
     return jsonify(result), 200
+
+@admin_bp.route('/api/admin/create', methods=['POST'])
+def create_user():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    email = data.get('email', '').strip()
+    first_name = data.get('first_name', '').strip()
+    last_name = data.get('last_name', '').strip()
+    membership = data.get('membership_status', 'Free')
+
+    if not username or not email or not first_name or not last_name:
+        return jsonify({"error": "All fields are required"}), 400
+
+    admin = get_admin()
+    result = admin.create_user(username, email, first_name, last_name, membership)
+    return jsonify(result), 200

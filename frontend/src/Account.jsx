@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import ClaimResults from './ClaimResults'
 import './Account.css'
 
 const API = 'http://127.0.0.1:5001/auth'
@@ -244,6 +245,7 @@ function Account() {
                     {item.queried_at && (
                       <p style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '0.5rem' }}>{item.queried_at}</p>
                     )}
+                    <ClaimResults claimId={item.id} />
                   </div>
                 ))
               }

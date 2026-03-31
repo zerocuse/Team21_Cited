@@ -272,13 +272,17 @@ def handle_fact_check():
             })
 
     # Save to DB if user is logged in
-    if user_id:
-        try:
-            create_claim(query, user_id)
-        except Exception as e:
-            print(f"Failed to save claim: {e}")
-
-    return jsonify({"status": "success", "results": all_results})
+    # Save to DB if user is logged in
+        if user_id:
+            try:
+                from services.fact_check_service import create_fact_check
+                claim = create_claim(query, user_id)
+                # Write a FactCheck row for each result that has a verdict
+                for result in all_results:
+                    if result.get("verdict"):
+                        create_fact_check(claim.claimID, user_id, result["verdict"])
+            except Exception as e:
+                print(f"Failed to save claim/fact_check: {e}")
 
 
 if __name__ == "__main__":

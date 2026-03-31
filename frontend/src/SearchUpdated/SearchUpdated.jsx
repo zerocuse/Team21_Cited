@@ -48,7 +48,7 @@ function SearchUpdated() {
 			});
 			if (!response.ok) throw new Error(`Server responded with ${response.status}`);
 			const data = await response.json();
-			setResults(data.results || []);
+			setResults(Array.isArray(data) ? data : []);
 			if ((s.autoScroll ?? false) && resultsRef.current) {
 				setTimeout(() => resultsRef.current.scrollIntoView({ behavior: 'smooth' }), 100);
 			}
@@ -270,7 +270,12 @@ function SearchUpdated() {
 									))}
 								</>
 							) : (
-								<p className="no-results">No professional fact-checks found for this claim.</p>
+								<div className="verdict-summary verdict-unrated">
+								<div className="verdict-headline">
+									<span className="verdict-icon">🔍</span>
+									<p className="verdict-text">Not enough information — no professional fact-checks found for this claim.</p>
+								</div>
+							</div>
 							)}
 						</div>
 					);

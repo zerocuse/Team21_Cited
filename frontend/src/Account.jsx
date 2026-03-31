@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import ClaimResults from './ClaimResults'
 import './Account.css'
 
@@ -7,6 +8,7 @@ const API = 'http://127.0.0.1:5001/auth'
 const BADGE_LABEL = { free: 'Free', premium: 'Premium', admin: 'Admin' }
 
 function Account() {
+  const location     = useLocation()
   const loginRef     = useRef()
   const fileInputRef = useRef()
   const [isLogin, setIsLogin]         = useState(true)
@@ -17,6 +19,14 @@ function Account() {
   const [authReady, setAuthReady]     = useState(false)
   const [history, setHistory]         = useState([])
 
+  const fetchHistory = (token) => {
+    fetch(API + '/history', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setHistory(data))
+      .catch(() => {})
+  }
+
+  // Re-runs on every navigation to /account so history stays fresh
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) { setAuthReady(true); return }
@@ -24,14 +34,11 @@ function Account() {
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
         setUser(data)
-        fetch(API + '/history', { headers: { 'Authorization': `Bearer ${token}` } })
-          .then(res => res.ok ? res.json() : [])
-          .then(data => setHistory(data))
-          .catch(() => {})
+        fetchHistory(token)
       })
       .catch(() => localStorage.removeItem('token'))
       .finally(() => setAuthReady(true))
-  }, [])
+  }, [location.pathname])
 
   const [form, setForm] = useState({
     email: '', password: '', first_name: '', last_name: '', username: ''
@@ -72,6 +79,7 @@ function Account() {
       } else {
         localStorage.setItem('token', data.token)
         setUser(data.user)
+        fetchHistory(data.token)
         loginRef.current.close()
       }
     } catch {
@@ -232,16 +240,18 @@ function Account() {
                       {item.claim_text.length > 100 ? item.claim_text.slice(0, 100) + '…' : item.claim_text}
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      {item.status && (
+                      {item.status ? (
                         <span className={`verdict-badge verdict-badge--${item.status === 'partially true' ? 'mixed' : item.status}`}>
                           {item.status}
                         </span>
+                      ) : (
+                        <span className="verdict-badge verdict-badge--unrated">No info</span>
                       )}
-                      {item.confidence_score != null && (
-                        <span className={`score-badge score-badge--${item.status === 'true' ? 'green' : item.status === 'false' ? 'red' : 'yellow'}`}>
+                      {item.confidence_score != null ? (
+                        <span className={`score-badge score-badge--${item.status === 'true' ? 'green' : item.status === 'false' ? 'red' : item.status ? 'yellow' : 'gray'}`}>
                           {Math.round(item.confidence_score)}%
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     {item.queried_at && (
                       <p style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '0.5rem' }}>{item.queried_at}</p>

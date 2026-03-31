@@ -274,8 +274,9 @@ def handle_fact_check():
     # Save to DB if user is logged in
     if user_id:
         try:
-            from services.fact_check_service import create_fact_check
+            from services.fact_check_services import create_fact_check
             from services.ai_analyzer import analyze_claim
+            from services.credibility_scorer import compute_confidence
 
             claim = create_claim(query, user_id)
 
@@ -285,7 +286,11 @@ def handle_fact_check():
             if has_google_verdict:
                 for result in all_results:
                     if result.get("verdict"):
-                        fc = create_fact_check(claim.claimID, user_id, result["verdict"])
+                        score = compute_confidence(
+                            result.get("fact_checks", []),
+                            result["verdict"],
+                        )
+                        fc = create_fact_check(claim.claimID, user_id, result["verdict"], score)
                         if fc and claim.status is None:
                             claim.status = fc.verdict
                             db.session.commit()

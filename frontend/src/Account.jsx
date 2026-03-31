@@ -231,17 +231,18 @@ function Account() {
                     <p style={{ fontWeight: 600, color: '#333', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
                       {item.claim_text.length > 100 ? item.claim_text.slice(0, 100) + '…' : item.claim_text}
                     </p>
-                    {item.status && (
-                      <span style={{
-                        fontSize: '0.75rem',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        background: item.status === 'true' ? '#d4edda' : item.status === 'false' ? '#f8d7da' : '#fff3cd',
-                        color: item.status === 'true' ? '#155724' : item.status === 'false' ? '#721c24' : '#856404',
-                      }}>
-                        {item.status}
-                      </span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {item.status && (
+                        <span className={`verdict-badge verdict-badge--${item.status === 'partially true' ? 'mixed' : item.status}`}>
+                          {item.status}
+                        </span>
+                      )}
+                      {item.confidence_score != null && (
+                        <span className={`score-badge score-badge--${item.status === 'true' ? 'green' : item.status === 'false' ? 'red' : 'yellow'}`}>
+                          {Math.round(item.confidence_score)}%
+                        </span>
+                      )}
+                    </div>
                     {item.queried_at && (
                       <p style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '0.5rem' }}>{item.queried_at}</p>
                     )}

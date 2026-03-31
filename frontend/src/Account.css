@@ -282,6 +282,31 @@
   font-size: 0.85rem;
 }
 
+/* ── Verdict & score badges ── */
+.verdict-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.verdict-badge--true  { background: #d4edda; color: #155724; }
+.verdict-badge--false { background: #f8d7da; color: #721c24; }
+.verdict-badge--mixed { background: #fff3cd; color: #856404; }
+
+.score-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+}
+
+.score-badge--green  { background: #c3e6cb; color: #155724; }
+.score-badge--red    { background: #f5c6cb; color: #721c24; }
+.score-badge--yellow { background: #ffeeba; color: #856404; }
+
 /* ── Auth dialog ── */
 .login-dialog[open] {
   display: flex;

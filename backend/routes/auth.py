@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-from models.models import User, Claim, db
+from models.models import User, Claim, FactCheck, db
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
@@ -141,4 +141,17 @@ def history():
         .order_by(Claim.queried_at.desc())
         .all()
     )
-    return jsonify([c.to_dict() for c in claims]), 200
+
+    result = []
+    for claim in claims:
+        d = claim.to_dict()
+        fc = (
+            db.session.query(FactCheck)
+            .filter_by(claimID=claim.claimID)
+            .order_by(FactCheck.factCheckID.desc())
+            .first()
+        )
+        if fc:
+            d['confidence_score'] = fc.confidence_score
+        result.append(d)
+    return jsonify(result), 200

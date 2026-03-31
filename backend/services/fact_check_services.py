@@ -23,9 +23,7 @@ def create_fact_check(claim_id: int, user_id: int, verdict: dict) -> FactCheck |
         claimID=claim_id,
         userID=user_id,
         verdict=status,
-        confidence_score=round(
-            (verdict.get("totalReviews", 1) / max(verdict.get("totalReviews", 1), 1)) * 100, 2
-        ),
+        confidence_score=min(100.0, round(verdict.get("totalReviews", 1) * 25.0, 2)),
         explanation=verdict.get("summary"),
         checked_via=CheckedVia.EXISTING_FACT,
     )

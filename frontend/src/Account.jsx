@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import ClaimResults from './ClaimResults'
+import CredibilityScore from './CredibilityScore'
 import './Account.css'
 
 const API = 'http://127.0.0.1:5001/auth'
@@ -231,6 +232,7 @@ function Account() {
                     <p style={{ fontWeight: 600, color: '#333', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
                       {item.claim_text.length > 100 ? item.claim_text.slice(0, 100) + '…' : item.claim_text}
                     </p>
+                    <CredibilityScore claimId={item.id} />
                     {item.status && (
                       <span style={{
                         fontSize: '0.75rem',

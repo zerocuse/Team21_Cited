@@ -62,3 +62,25 @@ def create_user():
     admin = get_admin()
     result = admin.create_user(username, email, first_name, last_name, membership)
     return jsonify(result), 200
+
+_admin_instance = get_admin()
+
+@admin_bp.route('/api/admin/service/status', methods=['GET'])
+def service_status():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    return jsonify({"running": _admin_instance.is_service_running()}), 200
+
+@admin_bp.route('/api/admin/service/stop', methods=['POST'])
+def stop_service():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    result = _admin_instance.stop_service()
+    return jsonify(result), 200
+
+@admin_bp.route('/api/admin/service/start', methods=['POST'])
+def start_service():
+    if not session.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    result = _admin_instance.start_service()
+    return jsonify(result), 200

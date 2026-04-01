@@ -49,6 +49,24 @@ function Admin() {
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState("");
   const [suspendDays, setSuspendDays] = useState(7);
+  const [serviceRunning, setServiceRunning] = useState(null);
+
+useEffect(() => {
+  fetch("/api/admin/service/status")
+    .then((res) => res.json())
+    .then((data) => setServiceRunning(data.running))
+    .catch(() => setServiceRunning(false));
+}, []);
+
+const toggleService = () => {
+  const endpoint = serviceRunning ? "/api/admin/service/stop" : "/api/admin/service/start";
+  fetch(endpoint, { method: "POST" })
+    .then((res) => res.json())
+    .then((data) => {
+      setMessage(data.message);
+      setServiceRunning(!serviceRunning);
+    });
+};
 
   useEffect(() => {
     fetch("/api/admin/users")
@@ -82,6 +100,12 @@ function Admin() {
   return (
     <div className="admin-page">
       <h2>Admin User Management</h2>
+      <div className="service-control">
+  <span>Service Status: <strong>{serviceRunning === null ? "Loading..." : serviceRunning ? "Running" : "Stopped"}</strong></span>
+  <button onClick={toggleService}>
+    {serviceRunning ? "Stop Service" : "Start Service"}
+  </button>
+</div>
       {message && <p>{message}</p>}
       {users.length === 0 ? (
         <p>No users found.</p>

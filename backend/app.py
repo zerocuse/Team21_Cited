@@ -272,13 +272,39 @@ def handle_fact_check():
             })
 
     # Save to DB if user is logged in
-    if user_id:
-        try:
-            create_claim(query, user_id)
-        except Exception as e:
-            print(f"Failed to save claim: {e}")
+    # Save to DB if user is logged in
+        if user_id:
+            try:
+                from services.fact_check_service import create_fact_check
+                from services.ai_analyzer import analyze_claim
 
-    return jsonify({"status": "success", "results": all_results})
+                claim = create_claim(query, user_id)
+
+                # Check if any result had a Google verdict
+                has_google_verdict = any(r.get("verdict") for r in all_results)
+
+                if has_google_verdict:
+                    for result in all_results:
+                        if result.get("verdict"):
+                            create_fact_check(claim.claimID, user_id, result["verdict"])
+                else:
+                    # Fallback to LLM when Google returns nothing
+                    ai_result = analyze_claim(query)
+                    if ai_result:
+                        from models.models import FactCheck, db
+                        record = FactCheck(
+                            claimID=claim.claimID,
+                            userID=user_id,
+                            verdict=ai_result["verdict"],
+                            confidence_score=ai_result["confidence_score"],
+                            explanation=ai_result["explanation"],
+                            checked_via=ai_result["checked_via"],
+                        )
+                        db.session.add(record)
+                        db.session.commit()
+
+            except Exception as e:
+                print(f"Failed to save claim/fact_check: {e}")
 
 
 if __name__ == "__main__":

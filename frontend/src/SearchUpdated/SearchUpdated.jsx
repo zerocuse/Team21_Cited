@@ -16,7 +16,7 @@ function SearchUpdated() {
 	const [isLoading, setIsLoading] = useState(false);
 	const [word_count_error, set_word_count_Error] = useState("");
 	const resultsRef = useRef(null);
-	const [activeTab, setActiveTab] = useState("verdict"); // verdict | sources | news
+	const [expandedSections, setExpandedSections] = useState({});
 
 	const handleSubmit = async (e) => {
 		if (e) e.preventDefault();
@@ -33,7 +33,6 @@ function SearchUpdated() {
 		if (isLoading) return;
 
 		setIsLoading(true);
-		setActiveTab("verdict"); // Reset to verdict tab on new search
 		const formData = new FormData();
 		formData.append("query", input);
 		formData.append("fact_check_method", s.factCheckMethod ?? 'web-scrape');
@@ -41,19 +40,35 @@ function SearchUpdated() {
 
 		try {
 			const token = localStorage.getItem('token');
-			const response = await fetch("http://127.0.0.1:5000/fact-check", {
+			const response = await fetch("http://localhost:5000/fact-check", { 
 				method: "POST",
-    			headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-    			body: formData,
+				headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+				body: formData,
 			});
 			if (!response.ok) throw new Error(`Server responded with ${response.status}`);
 			const data = await response.json();
+			
+			console.log("API Response:", data); // Debug log
+			
 			setResults(data.results || []);
+			
+			// Open sources and evidence sections by default
+			if (data.results && data.results.length > 0) {
+				const newExpanded = {};
+				data.results.forEach((_, idx) => {
+					newExpanded[`sources-${idx}`] = true;
+					newExpanded[`evidence-${idx}`] = true;
+					newExpanded[`findings-${idx}`] = true;
+				});
+				setExpandedSections(newExpanded);
+			}
+			
 			if ((s.autoScroll ?? false) && resultsRef.current) {
 				setTimeout(() => resultsRef.current.scrollIntoView({ behavior: 'smooth' }), 100);
 			}
 		} catch (error) {
 			console.error("Fetch error:", error);
+			alert("Error fetching results: " + error.message);
 		} finally {
 			setIsLoading(false);
 		}
@@ -76,24 +91,17 @@ function SearchUpdated() {
 		if (fileInput) fileInput.value = "";
 	};
 
-	const getFilePreview = (file) => {
-		if (file.type.startsWith("image/")) return URL.createObjectURL(file);
-		return null;
-	};
-
-	const getFileIcon = (file) => {
-		if (file.type.startsWith("image/")) return null;
-		if (file.type.includes("pdf")) return "📄";
-		if (file.type.includes("word") || file.name.endsWith(".docx")) return "📝";
-		if (file.type.includes("sheet") || file.name.endsWith(".xlsx")) return "📊";
-		return "📎";
-	};
-
 	const handleKeyDown = (e) => {
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
 			handleSubmit(e);
 		}
+	};
+
+	const getVerdictClass = (verdict) => {
+		if (!verdict) return "verdict-unrated";
+		const v = verdict.toLowerCase().replace(/\s+/g, '-');
+		return `verdict-${v}`;
 	};
 
 	const verdictIcon = (verdict) => {
@@ -107,28 +115,34 @@ function SearchUpdated() {
 		return "❓";
 	};
 
-	const confidenceColor = (confidence) => {
-		switch (confidence?.toLowerCase()) {
-			case "high":
-				return "#10b981";
-			case "medium":
-				return "#f59e0b";
-			case "low":
-				return "#ef4444";
-			default:
-				return "#6b7280";
-		}
+	const toggleSection = (key) => {
+		setExpandedSections(prev => ({
+			...prev,
+			[key]: !prev[key]
+		}));
 	};
 
-	const sourceStanceIcon = (stance) => {
-		switch (stance?.toLowerCase()) {
-			case "supports":
-				return "👍";
-			case "contradicts":
-				return "👎";
-			default:
-				return "📌";
-		}
+	const getRatingBadgeClass = (rating) => {
+		if (!rating) return "unrated";
+		const r = rating.toLowerCase().replace(/\s+/g, '-');
+		return r;
+	};
+
+	const getStanceClass = (stance) => {
+		if (!stance) return "neutral";
+		return stance.toLowerCase();
+	};
+
+	const getConfidenceClass = (confidence) => {
+		if (!confidence) return "low";
+		return confidence.toLowerCase();
+	};
+
+	const getAgreementClass = (agreement) => {
+		if (!agreement) return "disagree";
+		if (agreement.toLowerCase() === "agree") return "strong";
+		if (agreement.toLowerCase() === "partial") return "partial";
+		return "disagree";
 	};
 
 	return (
@@ -141,7 +155,7 @@ function SearchUpdated() {
 					onKeyDown={handleKeyDown}
 					placeholder="Type a claim to be fact-checked..."
 					className="search-input"
-					rows="3"
+					rows="4"
 				/>
 				
 				{word_count_error && (
@@ -150,8 +164,7 @@ function SearchUpdated() {
 
 				{uploadedFile && (
 					<div className="uploaded-file">
-						<span className="file-icon">{getFileIcon(uploadedFile)}</span>
-						<span className="file-name">{uploadedFile.name}</span>
+						<span className="file-name">📎 {uploadedFile.name}</span>
 						<button type="button" className="remove-file" onClick={removeFile}>
 							✕
 						</button>
@@ -160,7 +173,9 @@ function SearchUpdated() {
 
 				<div className="search-actions">
 					<label htmlFor="file-upload" className="icon-button" title="Upload document">
-						<img src="./src/assets/attachment-icon.svg" alt="fileupload" className='attachment-icon'/>
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+							<path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+						</svg>
 						<input
 							id="file-upload"
 							type="file"
@@ -188,299 +203,409 @@ function SearchUpdated() {
 				</div>
 			</form>
 
+			{/* Loading State */}
+			{isLoading && (
+				<div className="loading-container">
+					<div className="loading-animation">
+						<div className="loading-text">
+							<h4>Fact-checking your claim...</h4>
+							<p>Searching through multiple sources</p>
+						</div>
+						<div className="loading-steps">
+							<div className="loading-step">
+								<span className="spinner"></span>
+								<span>Searching fact-check databases</span>
+							</div>
+							<div className="loading-step">
+								<span className="spinner"></span>
+								<span>Analyzing news coverage</span>
+							</div>
+							<div className="loading-step">
+								<span className="spinner"></span>
+								<span>Compiling verdict</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
 			{/* Results */}
 			<div className="results-list" ref={resultsRef}>
+				{results.length === 0 && !isLoading ? (
+					<div style={{ textAlign: 'center', color: 'var(--muted)', marginTop: '2rem' }}>
+						<p>No results yet. Enter a claim above to get started.</p>
+					</div>
+				) : null}
+
 				{results.map((item, index) => {
 					const s = getSettings();
 					const verdict = item.verdict;
-					const factChecks = (item.fact_checks || []).slice(0, s.resultsPerClaim ?? 5);
-					const news = item.news || {};
 					const sourcesCited = item.sources_cited || [];
-					const isCurrentEvent = item.is_current_event || false;
+					const news = item.news || {};
+					const factChecks = (item.fact_checks || []).slice(0, s.resultsPerClaim ?? 5);
+
+					console.log("Result item:", item); // Debug log
+					console.log("Verdict:", verdict); // Debug log
+					console.log("Sources:", sourcesCited); // Debug log
 
 					return (
 						<div key={index} className="result-card">
 							{/* Claim Header */}
-							<div className="search-term-header">
-								<small>Claim:</small>
-								<h4>{item.original_claim}</h4>
-								{isCurrentEvent && <span className="current-event-badge">🔥 Current Event</span>}
+							<div className="claim-header">
+								<div className="claim-label">
+									<span className="claim-label-text">Claim:</span>
+									{item.is_current_event && (
+										<span className="current-event-badge">🔥 Current Event</span>
+									)}
+								</div>
+								<p className="claim-text">{item.original_claim}</p>
 							</div>
 
-							{/* Main Verdict Section */}
-							{verdict && (
-								<div className={`verdict-section verdict-${verdict.verdict}`}>
-									{/* Verdict Banner */}
-									<div className="verdict-banner">
-										<div className="verdict-left">
-											<span className="verdict-icon">{verdictIcon(verdict.verdict)}</span>
-											<div className="verdict-info">
-												<h3 className="verdict-title">{verdict.verdict.toUpperCase()}</h3>
-												<p className="verdict-summary">{verdict.summary}</p>
-											</div>
-										</div>
-										<div className="verdict-right">
-											<div className="confidence-badge" style={{ borderColor: confidenceColor(verdict.confidence) }}>
-												<span className="confidence-label">Confidence</span>
-												<span className="confidence-value">{verdict.confidence.toUpperCase()}</span>
-											</div>
-											<span className="verdict-source">{verdict.source}</span>
+							{/* Main Verdict - ALWAYS VISIBLE */}
+							{verdict ? (
+								<div className={`gemini-verdict ${getVerdictClass(verdict.verdict)}`}>
+									<div className="verdict-badge-row">
+										<span className="verdict-icon-large">{verdictIcon(verdict.verdict)}</span>
+										<div className="verdict-label-group">
+											<span className="verdict-label">{verdict.verdict.toUpperCase()}</span>
 										</div>
 									</div>
 
+									<div style={{ marginTop: '0.5rem' }}>
+										<p style={{ margin: '0.5rem 0', fontSize: '0.95rem', lineHeight: '1.5' }}>
+											{verdict.summary}
+										</p>
+									</div>
+
+									{/* Confidence & Source */}
+									<div className="verdict-stats" style={{ marginTop: '0.75rem' }}>
+										<span className={`confidence-pill ${getConfidenceClass(verdict.confidence)}`}>
+											📊 {verdict.confidence?.toUpperCase() || 'UNKNOWN'}
+										</span>
+										<span className="verdict-source-tag">
+											{verdict.source || 'Unknown Source'}
+										</span>
+									</div>
+
 									{/* Detailed Reasoning */}
-									{(s.showDetailedReasoning ?? true) && verdict.detailed_reasoning && (
-										<div className="reasoning-box">
-											<h5>Analysis</h5>
-											<p>{verdict.detailed_reasoning}</p>
+									{verdict.detailed_reasoning && (
+										<div className="verdict-summary-text">
+											<p><strong>Analysis:</strong> {verdict.detailed_reasoning}</p>
 										</div>
 									)}
 
 									{/* Key Findings */}
-									{(s.showKeyFindings ?? true) && verdict.key_findings && verdict.key_findings.length > 0 && (
-										<div className="findings-box">
-											<h5>Key Findings</h5>
-											<ul>
-												{verdict.key_findings.map((finding, idx) => (
-													<li key={idx}>{finding}</li>
-												))}
-											</ul>
+									{verdict.key_findings && verdict.key_findings.length > 0 && (
+										<div>
+											<button
+												className="section-toggle"
+												onClick={() => toggleSection(`findings-${index}`)}
+												style={{ marginTop: '0.75rem' }}>
+												<span>🎯 Key Findings ({verdict.key_findings.length})</span>
+												<span className={`toggle-arrow ${expandedSections[`findings-${index}`] ? 'expanded' : ''}`}>→</span>
+											</button>
+											{expandedSections[`findings-${index}`] && (
+												<div className="section-content">
+													<ul className="findings-list">
+														{verdict.key_findings.map((finding, idx) => (
+															<li key={idx} className="finding-item">{finding}</li>
+														))}
+													</ul>
+												</div>
+											)}
 										</div>
 									)}
 
 									{/* Red Flags */}
 									{verdict.red_flags && verdict.red_flags.length > 0 && (
-										<div className="red-flags-box">
-											<h5>⚠️ Red Flags</h5>
-											<ul>
-												{verdict.red_flags.map((flag, idx) => (
-													<li key={idx}>{flag}</li>
-												))}
-											</ul>
+										<div>
+											<button
+												className="section-toggle"
+												onClick={() => toggleSection(`flags-${index}`)}
+												style={{ marginTop: '0.75rem' }}>
+												<span>⚠️ Red Flags ({verdict.red_flags.length})</span>
+												<span className={`toggle-arrow ${expandedSections[`flags-${index}`] ? 'expanded' : ''}`}>→</span>
+											</button>
+											{expandedSections[`flags-${index}`] && (
+												<div className="section-content">
+													<ul className="red-flags-list">
+														{verdict.red_flags.map((flag, idx) => (
+															<li key={idx} className="red-flag-item">{flag}</li>
+														))}
+													</ul>
+												</div>
+											)}
 										</div>
 									)}
 
 									{/* Evidence Assessment */}
 									{verdict.evidence_assessment && (
-										<div className="evidence-box">
-											<h5>Evidence Assessment</h5>
-											<div className="evidence-grid">
-												<div className="evidence-item">
-													<strong>Source Agreement:</strong>
-													<span>{verdict.evidence_assessment.source_agreement}</span>
-												</div>
-												<div className="evidence-item">
-													<strong>Fact-Checks Found:</strong>
-													<span>{verdict.totalFactChecks}</span>
-												</div>
-												<div className="evidence-item">
-													<strong>News Articles:</strong>
-													<span>{verdict.totalNewsArticles}</span>
-												</div>
-											</div>
-											{verdict.evidence_assessment.fact_checks_summary && (
-												<p className="evidence-text">
-													<strong>Fact-Checks:</strong> {verdict.evidence_assessment.fact_checks_summary}
-												</p>
-											)}
-											{verdict.evidence_assessment.news_coverage_summary && (
-												<p className="evidence-text">
-													<strong>News Coverage:</strong> {verdict.evidence_assessment.news_coverage_summary}
-												</p>
-											)}
-											{verdict.evidence_assessment.trending_context && (
-												<p className="evidence-text">
-													<strong>Trending:</strong> {verdict.evidence_assessment.trending_context}
-												</p>
-											)}
-										</div>
-									)}
-
-									{/* Watch/Context */}
-									{(s.showWhatToWatch ?? true) && verdict.what_to_watch && (
-										<div className="watch-box">
-											<h5>What to Watch</h5>
-											<p>{verdict.what_to_watch}</p>
-										</div>
-									)}
-								</div>
-							)}
-
-							{/* Tabbed Sources/News */}
-							{(sourcesCited.length > 0 || news.articles?.length > 0 || factChecks.length > 0) && (
-								<div className="results-tabs">
-									<div className="tab-buttons">
-										<button
-											className={`tab-btn ${activeTab === "verdict" ? "active" : ""}`}
-											onClick={() => setActiveTab("verdict")}>
-											Verdict
-										</button>
-										{sourcesCited.length > 0 && (
+										<div>
 											<button
-												className={`tab-btn ${activeTab === "sources" ? "active" : ""}`}
-												onClick={() => setActiveTab("sources")}>
-												Sources ({sourcesCited.length})
+												className="section-toggle"
+												onClick={() => toggleSection(`evidence-${index}`)}
+												style={{ marginTop: '0.75rem' }}>
+												<span>📋 Evidence Assessment</span>
+												<span className={`toggle-arrow ${expandedSections[`evidence-${index}`] ? 'expanded' : ''}`}>→</span>
 											</button>
-										)}
-										{news.articles?.length > 0 && (
-											<button
-												className={`tab-btn ${activeTab === "news" ? "active" : ""}`}
-												onClick={() => setActiveTab("news")}>
-												News ({news.articles.length})
-											</button>
-										)}
-										{factChecks.length > 0 && (
-											<button
-												className={`tab-btn ${activeTab === "matches" ? "active" : ""}`}
-												onClick={() => setActiveTab("matches")}>
-												Claim Matches ({factChecks.length})
-											</button>
-										)}
-									</div>
-
-									{/* Sources Tab */}
-									{activeTab === "sources" && sourcesCited.length > 0 && (
-										<div className="tab-content sources-tab">
-											<div className="sources-list">
-												{sourcesCited.map((src, idx) => (
-													<div key={idx} className="source-item">
-														<div className="source-header">
-															<span className="source-type-badge">{src.type}</span>
-															<span className="source-stance">{sourceStanceIcon(src.stance)} {src.stance || "neutral"}</span>
-														</div>
-														<div className="source-content">
-															{src.publisher && (
-																<h6 className="source-name">{src.publisher}</h6>
-															)}
-															{src.source && (
-																<h6 className="source-name">{src.source}</h6>
-															)}
-															{src.rating && (
-																<span className={`source-rating rating-${src.rating.toLowerCase()}`}>
-																	{src.rating}
+											{expandedSections[`evidence-${index}`] && (
+												<div className="section-content">
+													<div className="evidence-grid">
+														<div className="evidence-card neutral">
+															<h6>Source Agreement</h6>
+															<div style={{ marginTop: '0.5rem' }}>
+																<span className={`agreement-badge ${getAgreementClass(verdict.evidence_assessment.source_agreement)}`}>
+																	{verdict.evidence_assessment.source_agreement?.toUpperCase() || 'UNKNOWN'}
 																</span>
-															)}
-															{src.title && (
-																<p className="source-title">{src.title}</p>
-															)}
-															{src.excerpt && (
-																<p className="source-excerpt">"{src.excerpt}"</p>
-															)}
-															<div className="source-meta">
-																{src.date && <span className="source-date">📅 {new Date(src.date).toLocaleDateString()}</span>}
-																{src.url && (
-																	<a
-																		href={src.url}
-																		target="_blank"
-																		rel="noreferrer"
-																		className="source-link">
-																		View Source →
-																	</a>
-																)}
 															</div>
 														</div>
+														<div className="evidence-card neutral">
+															<h6>Fact-Checks Found</h6>
+															<p style={{ margin: '0.5rem 0 0 0', fontSize: '1.1rem', fontWeight: '700' }}>
+																{verdict.totalFactChecks || 0}
+															</p>
+														</div>
+														<div className="evidence-card neutral">
+															<h6>News Articles</h6>
+															<p style={{ margin: '0.5rem 0 0 0', fontSize: '1.1rem', fontWeight: '700' }}>
+																{verdict.totalNewsArticles || 0}
+															</p>
+														</div>
 													</div>
-												))}
-											</div>
-										</div>
-									)}
 
-									{/* News Tab */}
-									{activeTab === "news" && news.articles?.length > 0 && (
-										<div className="tab-content news-tab">
-											<div className="news-grid">
-												{news.articles.map((article, idx) => (
-													<div key={idx} className="news-card">
-														{article.imageUrl && (
-															<img src={article.imageUrl} alt={article.title} className="news-image" />
-														)}
-														<div className="news-content">
-															<span className="news-source">{article.source}</span>
-															<h5 className="news-title">{article.title}</h5>
-															{article.description && (
-																<p className="news-description">{article.description}</p>
-															)}
-															<div className="news-footer">
-																{article.publishedAt && (
-																	<span className="news-date">📅 {new Date(article.publishedAt).toLocaleDateString()}</span>
-																)}
-																<a
-																	href={article.url}
-																	target="_blank"
-																	rel="noreferrer"
-																	className="news-link">
-																	Read More →
-																</a>
-															</div>
+													{verdict.evidence_assessment.fact_checks_summary && (
+														<div className="evidence-card neutral" style={{ marginTop: '0.85rem' }}>
+															<h6>Fact-Check Summary</h6>
+															<p>{verdict.evidence_assessment.fact_checks_summary}</p>
 														</div>
-													</div>
-												))}
-											</div>
-											{news.source_diversity && (
-												<div className="news-stats">
-													<p>📊 Coverage from {news.source_diversity.unique_sources} unique source{news.source_diversity.unique_sources !== 1 ? 's' : ''}</p>
-													{news.source_diversity.is_diverse && (
-														<span className="diversity-badge">✓ Diverse Coverage</span>
+													)}
+
+													{verdict.evidence_assessment.news_coverage_summary && (
+														<div className="evidence-card neutral" style={{ marginTop: '0.85rem' }}>
+															<h6>News Coverage</h6>
+															<p>{verdict.evidence_assessment.news_coverage_summary}</p>
+														</div>
+													)}
+
+													{verdict.evidence_assessment.trending_context && (
+														<div className="evidence-card neutral" style={{ marginTop: '0.85rem' }}>
+															<h6>Trending Status</h6>
+															<p>{verdict.evidence_assessment.trending_context}</p>
+														</div>
 													)}
 												</div>
 											)}
 										</div>
 									)}
 
-									{/* Claim Matches Tab */}
-									{activeTab === "matches" && factChecks.length > 0 && (
-										<div className="tab-content matches-tab">
-											{factChecks.map((claim, i) => (
-												<div key={i} className="claim-match">
-													<div className="claim-text-box">
-														<strong>Similar Claim:</strong>
-														<p>{claim.text}</p>
-														{claim.relevance && (
-															<span className="relevance-score">Relevance: {Math.round(claim.relevance * 100)}%</span>
-														)}
-													</div>
+									{/* What to Watch */}
+									{verdict.what_to_watch && (
+										<div className="watch-text" style={{ marginTop: '0.85rem' }}>
+											<strong>What to Watch:</strong>
+											<p>{verdict.what_to_watch}</p>
+										</div>
+									)}
+								</div>
+							) : (
+								<div className="no-evidence">
+									⏳ Verdict not available
+								</div>
+							)}
 
-													<div className="reviews-list">
-														{claim.claimReview && claim.claimReview.map((review, j) => (
-															<div key={j} className="review-item">
-																<div className="review-rating">
-																	<span className={`rating-badge ${review.ratingCategory || "unrated"}`}>
-																		{review.condensedRating || review.textualRating || "Unrated"}
-																	</span>
-																	{review.textualRating && review.textualRating !== review.condensedRating && (
-																		<span className="textual-rating">({review.textualRating})</span>
-																	)}
-																</div>
-																<div className="review-details">
-																	<strong>{review.publisher?.name || "Unknown Publisher"}</strong>
-																	{review.reviewDate && (
-																		<span className="review-date">📅 {new Date(review.reviewDate).toLocaleDateString()}</span>
-																	)}
-																	{(s.showSourceLinks ?? true) && review.url && (
-																		<a
-																			href={review.url}
-																			target="_blank"
-																			rel="noreferrer"
-																			className="review-link">
-																			View Review →
-																		</a>
-																	)}
-																</div>
-															</div>
-														))}
+							{/* Sources Cited */}
+							{sourcesCited && sourcesCited.length > 0 && (
+								<div style={{ marginTop: '1rem' }}>
+									<button
+										className="section-toggle"
+										onClick={() => toggleSection(`sources-${index}`)}>
+										<span>📚 Sources Cited ({sourcesCited.length})</span>
+										<span className={`toggle-arrow ${expandedSections[`sources-${index}`] ? 'expanded' : ''}`}>→</span>
+									</button>
+
+									{expandedSections[`sources-${index}`] && (
+										<div className="section-content">
+											<div className="evidence-grid">
+												{sourcesCited.map((src, idx) => (
+													<div key={idx} className={`evidence-card ${getStanceClass(src.stance)}`}>
+														<div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+															<span className="rating-badge" style={{
+																background: 'var(--primary-lighter-gray)',
+																color: 'var(--primary-dark-gray)'
+															}}>
+																{src.type || 'source'}
+															</span>
+															<span className={`news-stance-tag ${getStanceClass(src.stance)}`}>
+																{src.stance ? src.stance.charAt(0).toUpperCase() + src.stance.slice(1) : 'Neutral'}
+															</span>
+														</div>
+
+														<h6>{src.publisher || src.source || 'Unknown'}</h6>
+
+														{src.rating && (
+															<span className={`rating-badge ${getRatingBadgeClass(src.rating)}`}>
+																{src.rating}
+															</span>
+														)}
+
+														{src.title && (
+															<p style={{ margin: '0.5rem 0 0 0', fontSize: '0.95rem', fontWeight: '600', lineHeight: '1.3' }}>
+																{src.title}
+															</p>
+														)}
+
+														{src.excerpt && (
+															<p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', fontStyle: 'italic', color: 'var(--muted)', lineHeight: '1.4' }}>
+																"{src.excerpt}"
+															</p>
+														)}
+
+														<div className="verdict-stats" style={{ marginTop: '0.75rem' }}>
+															{src.date && (
+																<span className="stat-item">
+																	📅 {new Date(src.date).toLocaleDateString()}
+																</span>
+															)}
+															{src.url && (
+																<a
+																	href={src.url}
+																	target="_blank"
+																	rel="noreferrer"
+																	className="source-link"
+																	style={{ color: 'inherit', textDecoration: 'underline', fontWeight: '600' }}>
+																	View Source
+																</a>
+															)}
+														</div>
 													</div>
-												</div>
-											))}
+												))}
+											</div>
 										</div>
 									)}
 								</div>
 							)}
 
-							{/* No Results Fallback */}
+							{/* Fact Check Matches */}
+							{factChecks && factChecks.length > 0 && (
+								<div style={{ marginTop: '1rem' }}>
+									<button
+										className="section-toggle"
+										onClick={() => toggleSection(`matches-${index}`)}>
+										<span>🔍 Similar Claims ({factChecks.length})</span>
+										<span className={`toggle-arrow ${expandedSections[`matches-${index}`] ? 'expanded' : ''}`}>→</span>
+									</button>
+
+									{expandedSections[`matches-${index}`] && (
+										<div className="section-content">
+											<div className="evidence-grid">
+												{factChecks.map((claim, i) => (
+													<div key={i} className="fact-check-item neutral">
+														<h6>{claim.text}</h6>
+
+														{claim.relevance && (
+															<span className={`relevance-badge ${claim.relevance >= 0.7 ? 'high' : claim.relevance >= 0.4 ? 'medium' : 'low'}`}>
+																Relevance: {Math.round(claim.relevance * 100)}%
+															</span>
+														)}
+
+														<div style={{ marginTop: '0.75rem' }}>
+															{claim.claimReview && claim.claimReview.map((review, j) => (
+																<div key={j} className="review-row">
+																	<span className={`rating-badge ${getRatingBadgeClass(review.ratingCategory || review.textualRating)}`}>
+																		{review.condensedRating || review.textualRating || "Unrated"}
+																	</span>
+																	<span className="stat-item">
+																		{review.publisher?.name || "Unknown"}
+																	</span>
+																	{review.reviewDate && (
+																		<span className="stat-item">
+																			📅 {new Date(review.reviewDate).toLocaleDateString()}
+																		</span>
+																	)}
+																	{review.url && (
+																		<a
+																			href={review.url}
+																			target="_blank"
+																			rel="noreferrer"
+																			className="source-link"
+																			style={{ fontSize: '0.9rem' }}>
+																			View
+																		</a>
+																	)}
+																</div>
+															))}
+														</div>
+													</div>
+												))}
+											</div>
+										</div>
+									)}
+								</div>
+							)}
+
+							{/* News Coverage */}
+							{news.articles && news.articles.length > 0 && (
+								<div style={{ marginTop: '1rem' }}>
+									<button
+										className="section-toggle"
+										onClick={() => toggleSection(`news-${index}`)}>
+										<span>📰 News Coverage ({news.articles.length})</span>
+										<span className={`toggle-arrow ${expandedSections[`news-${index}`] ? 'expanded' : ''}`}>→</span>
+									</button>
+
+									{expandedSections[`news-${index}`] && (
+										<div className="section-content">
+											<div className="news-articles-list">
+												{news.articles.map((article, idx) => (
+													<a
+														key={idx}
+														href={article.url}
+														target="_blank"
+														rel="noreferrer"
+														className="news-article-item">
+														{article.imageUrl && (
+															<img src={article.imageUrl} alt={article.title} className="news-article-thumb" />
+														)}
+														<span className="news-source">{article.source}</span>
+														<h6 className="news-article-title">{article.title}</h6>
+														{article.description && (
+															<p style={{ margin: '0.5rem 0 0 0', color: 'var(--muted)' }}>
+																{article.description}
+															</p>
+														)}
+														<div className="news-article-meta" style={{ marginTop: '0.75rem' }}>
+															{article.publishedAt && (
+																<span className="news-date">
+																	📅 {new Date(article.publishedAt).toLocaleDateString()}
+																</span>
+															)}
+														</div>
+													</a>
+												))}
+											</div>
+
+											{news.source_diversity && (
+												<div className="source-diversity" style={{ marginTop: '1rem' }}>
+													<h6>Source Diversity</h6>
+													<p style={{ margin: '0.5rem 0 0 0' }}>
+														Coverage from {news.source_diversity.unique_sources} source{news.source_diversity.unique_sources !== 1 ? 's' : ''}
+													</p>
+													{news.source_diversity.is_diverse && (
+														<span className="diversity-badge high" style={{ marginTop: '0.5rem' }}>
+															✓ Diverse Coverage
+														</span>
+													)}
+												</div>
+											)}
+										</div>
+									)}
+								</div>
+							)}
+
+							{/* No Results */}
 							{!verdict && factChecks.length === 0 && (
-								<p className="no-results">
-									No results found. Try refining your claim or check back later.
-								</p>
+								<div className="no-evidence">
+									⚠️ No results found for this claim.
+								</div>
 							)}
 						</div>
 					);

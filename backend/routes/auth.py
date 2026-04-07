@@ -142,16 +142,28 @@ def history():
         .all()
     )
 
-    result = []
-    for claim in claims:
-        d = claim.to_dict()
-        fc = (
+    results = []
+    for c in claims:
+        claim_data = c.to_dict()
+
+        fact_check = (
             db.session.query(FactCheck)
-            .filter_by(claimID=claim.claimID)
+            .filter_by(claimID=c.claimID)
             .order_by(FactCheck.factCheckID.desc())
             .first()
         )
-        if fc:
-            d['confidence_score'] = fc.confidence_score
-        result.append(d)
-    return jsonify(result), 200
+
+        if fact_check:
+            claim_data['verdict'] = fact_check.verdict.value if fact_check.verdict else None
+            claim_data['confidence_score'] = fact_check.confidence_score
+            claim_data['explanation'] = fact_check.explanation
+            claim_data['checked_via'] = fact_check.checked_via.value if fact_check.checked_via else None
+        else:
+            claim_data['verdict'] = None
+            claim_data['confidence_score'] = None
+            claim_data['explanation'] = None
+            claim_data['checked_via'] = None
+
+        results.append(claim_data)
+
+    return jsonify(results), 200

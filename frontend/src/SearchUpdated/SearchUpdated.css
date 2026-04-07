@@ -66,6 +66,17 @@
  margin-top: '5px';
 }
 
+.rejection-msg {
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  background: #fff7ed;
+  border-left: 4px solid #f97316;
+  border-radius: 6px;
+  color: #9a3412;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 .uploaded-file {
   display: flex;
   align-items: center;

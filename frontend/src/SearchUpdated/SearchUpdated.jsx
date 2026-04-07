@@ -18,6 +18,7 @@ function SearchUpdated() {
 	const [results, setResults] = useState([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [word_count_error, set_word_count_Error] = useState("");
+	const [rejectionMsg, setRejectionMsg] = useState("");
 	const resultsRef = useRef(null);
 
 	const handleSubmit = async (e) => {
@@ -32,6 +33,7 @@ function SearchUpdated() {
 			return;
 		}
 		set_word_count_Error("");
+		setRejectionMsg("");
 		if (isLoading) return;
 
 		setIsLoading(true);
@@ -47,6 +49,12 @@ function SearchUpdated() {
     			headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     			body: formData,
 			});
+			if (response.status === 422) {
+				const err = await response.json();
+				setRejectionMsg(err.message || "This claim cannot be fact-checked.");
+				setResults([]);
+				return;
+			}
 			if (!response.ok) throw new Error(`Server responded with ${response.status}`);
 			const data = await response.json();
 			setResults(Array.isArray(data) ? data : []);
@@ -147,6 +155,7 @@ function SearchUpdated() {
 					rows="3"
 				/>
 				{word_count_error && <div className="word_count"> ⚠️ {word_count_error}</div>}
+			{rejectionMsg && <div className="rejection-msg">⚠️ {rejectionMsg}</div>}
 				{uploadedFile && (
 					<div className="uploaded-file">
 						<span className="file-name">{uploadedFile.name}</span>

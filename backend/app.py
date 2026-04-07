@@ -214,6 +214,77 @@ def is_relevant_claim(sent):
     return (has_subject and has_verb and is_not_short and is_not_question) or has_entities
 
 
+_GREETING_TOKENS = {
+    "hello", "hi", "hey", "greetings", "howdy", "sup", "yo",
+    "bye", "goodbye", "thanks", "thank", "ok", "okay",
+}
+
+_OPINION_STARTERS = {
+    "i think", "i feel", "i believe", "i like", "i love",
+    "i hate", "i want", "i prefer", "i wish", "i enjoy",
+    "in my opinion", "personally", "i find", "i disagree",
+}
+
+
+def is_scorable_claim(query: str) -> tuple[bool, str]:
+    """
+    Use the loaded spaCy model to decide whether a query is a fact-checkable
+    claim worth processing.
+
+    Returns (True, "") if scorable, or (False, rejection_reason) otherwise.
+    Errs on the side of acceptance — only rejects things that are clearly
+    unverifiable (greetings, pure opinions, math, empty noise).
+    """
+    doc = nlp(query)
+    tokens = [t for t in doc if not t.is_punct and not t.is_space and not t.is_quote]
+
+    # ── 1. Minimum length ──────────────────────────────────────────────────
+    if len(tokens) < 3:
+        return False, "Too short to fact-check — please provide a complete claim."
+
+    q = query.lower().strip()
+
+    # ── 2. Pure greeting ──────────────────────────────────────────────────
+    if len(tokens) <= 5 and tokens[0].lower_ in _GREETING_TOKENS:
+        return False, "This looks like a greeting, not a verifiable claim."
+
+    # ── 3. Named entities present (strong scorability signal) ─────────────
+    has_entities = len(doc.ents) > 0
+
+    # ── 4. Numeric / quantitative content ─────────────────────────────────
+    QUANT_ENT_TYPES = {"CARDINAL", "PERCENT", "QUANTITY", "MONEY", "ORDINAL", "DATE", "TIME"}
+    has_numbers = any(t.like_num or t.ent_type_ in QUANT_ENT_TYPES for t in doc)
+
+    # ── 5. Comparative / superlative adjective or adverb ──────────────────
+    has_comparative = any(t.tag_ in {"JJR", "JJS", "RBR", "RBS"} for t in doc)
+
+    # ── 6. At least one sentence with subject + verb (assertion structure) ─
+    has_assertion = any(is_relevant_claim(sent) for sent in doc.sents)
+
+    # ── 7. Pure personal opinion with no factual anchor ───────────────────
+    is_pure_opinion = any(q.startswith(op) for op in _OPINION_STARTERS)
+    if is_pure_opinion and not has_entities and not has_numbers:
+        return False, (
+            "Personal opinions without factual assertions cannot be fact-checked. "
+            "Try rephrasing as a specific claim (e.g. 'X causes Y' or 'X happened in Y')."
+        )
+
+    # ── 8. Pure arithmetic expression ─────────────────────────────────────
+    MATH_OPS = {"+", "-", "*", "/", "=", "×", "÷", "plus", "minus", "times", "divided"}
+    if all(t.like_num or t.lower_ in MATH_OPS for t in tokens):
+        return False, "Mathematical expressions are not fact-checkable claims."
+
+    # ── 9. Needs at least one factual signal ──────────────────────────────
+    factual_signals = sum([has_entities, has_numbers, has_comparative, has_assertion])
+    if factual_signals == 0:
+        return False, (
+            "This submission doesn't contain enough verifiable information to fact-check. "
+            "Include specific people, places, dates, numbers, or factual assertions."
+        )
+
+    return True, ""
+
+
 def _parse_verdict_from_text(text: str) -> str:
     """Parse a verdict category from free-form analysis text."""
     t = text.lower()
@@ -331,6 +402,12 @@ def handle_fact_check():
     user_id = _decode_token(token) if token else None
 
     query = " ".join(query.split())
+
+    # ── Scorability gate — reject before any processing or DB write ────────
+    scorable, rejection_reason = is_scorable_claim(query)
+    if not scorable:
+        return jsonify({"status": "unscoreable", "message": rejection_reason}), 422
+
     doc = nlp(query)
     relevant_sentences = [sent.text.strip() for sent in doc.sents if is_relevant_claim(sent)]
     if not relevant_sentences:

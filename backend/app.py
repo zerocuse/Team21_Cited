@@ -272,6 +272,7 @@ def handle_fact_check():
             })
 
     # Save to DB if user is logged in
+    from models.models import Source, Citation, ClaimSourceLink, SourceType
     if user_id:
         try:
             from services.fact_check_services import create_fact_check
@@ -288,7 +289,7 @@ def handle_fact_check():
             else:
                 ai_result = analyze_claim(query)
                 if ai_result:
-                    from models.models import FactCheck, db
+                    from models.models import FactCheck
                     record = FactCheck(
                         claimID=claim.claimID,
                         userID=user_id,
@@ -298,7 +299,53 @@ def handle_fact_check():
                         checked_via=ai_result["checked_via"],
                     )
                     db.session.add(record)
-                    db.session.commit()
+
+            # Save sources from Google results
+            print(f"DEBUG: Saving sources for {len(all_results)} results")
+            for result in all_results:
+                for fact_check_item in result.get("fact_checks", []):
+                    for review in fact_check_item.get("claimReview", []):
+                        publisher_name = review.get("publisher", {}).get("name", "Unknown")
+                        review_url = review.get("url", "")
+                        rating_text = review.get("textualRating", "")
+
+                        if not review_url:
+                            continue
+
+                        # Reuse existing source if URL already exists
+                        existing_source = Source.query.filter_by(url=review_url).first()
+                        if existing_source:
+                            source = existing_source
+                        else:
+                            source = Source(
+                                url=review_url,
+                                title=publisher_name,
+                                source_type=SourceType.NEWS,
+                            )
+                            db.session.add(source)
+                            db.session.flush()  # get sourceID before linking
+
+                        # Link source to claim (skip if already linked)
+                        existing_link = ClaimSourceLink.query.filter_by(
+                            claimID=claim.claimID,
+                            sourceID=source.sourceID
+                        ).first()
+                        if not existing_link:
+                            link = ClaimSourceLink(
+                                claimID=claim.claimID,
+                                sourceID=source.sourceID
+                            )
+                            db.session.add(link)
+
+                        # Create citation with the rating text
+                        citation = Citation(
+                            claimID=claim.claimID,
+                            sourceID=source.sourceID,
+                            info_used=rating_text
+                        )
+                        db.session.add(citation)
+
+            db.session.commit()
 
         except Exception as e:
             print(f"Failed to save claim/fact_check: {e}")

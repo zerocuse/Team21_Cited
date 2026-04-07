@@ -256,7 +256,6 @@ function Account() {
                     {item.queried_at && (
                       <p style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '0.5rem' }}>{item.queried_at}</p>
                     )}
-                    <ClaimResults claimId={item.id} />
                   </div>
                 ))
               }

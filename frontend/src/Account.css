@@ -256,6 +256,7 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  padding-bottom: 3rem;
 }
 
 .history-header {
@@ -263,23 +264,94 @@
   font-size: 1.5rem;
 }
 
-.history-container {
+.history-list {
   display: flex;
-  flex-direction: row;
-  gap: 1rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.history-placeholder {
-  width: 15%;
-  min-width: 200px;
-  height: 10rem;
-  background-color: white;
-  border-radius: 8px;
-  padding: 1rem;
+/* Individual history item */
+.history-item {
+  background: white;
+  border-radius: 10px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
-  color: #ccc;
-  font-size: 0.85rem;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  transition: box-shadow 120ms;
+}
+
+.history-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.history-item--open {
+  border-color: #d1d5db;
+}
+
+/* Summary row (always visible) */
+.history-item-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
+  user-select: none;
+}
+
+.history-item-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.history-verdict-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.history-claim-text {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1f2937;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.history-item-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.history-date {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.history-expand-icon {
+  font-size: 1.2rem;
+  color: #9ca3af;
+  display: inline-block;
+  transition: transform 200ms ease;
+  line-height: 1;
+  padding-left: 2px;
+}
+
+.history-expand-icon.open {
+  transform: rotate(90deg);
+}
+
+/* Expanded detail panel */
+.history-item-detail {
+  border-top: 1px solid #e5e7eb;
+  padding: 1rem 1.1rem 1.2rem;
+  background: #fafafa;
 }
 
 /* ── Verdict & score badges ── */

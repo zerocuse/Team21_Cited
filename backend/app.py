@@ -133,7 +133,7 @@ def classify_rating(condensed):
         return "mixed"
     if words & TRUE_WORDS:
         return "true"
-    
+
     c = condensed.lower()
     if any(w in c for w in FALSE_WORDS):
         return "false"
@@ -149,7 +149,7 @@ def build_verdict(fact_checks):
     if not fact_checks:
         return None
 #Ratings
-    condensed_map = {}  
+    condensed_map = {}
     total = 0
 
     for claim in fact_checks:
@@ -167,7 +167,7 @@ def build_verdict(fact_checks):
     top_rating = sorted_ratings[0][0]
     category = classify_rating(top_rating)
 
-    #Summary 
+    #Summary
     source_word = "source" if total == 1 else "sources"
     summaries = {
         "true": f"Rated '{top_rating}' by {total} {source_word}. Claim appears credible.",
@@ -203,15 +203,117 @@ def is_relevant_claim(sent):
     # Must have a subject and a main verb
     has_subject = any(token.dep_ in ("nsubj", "nsubjpass") for token in sent)
     has_verb = any(token.pos_ == "VERB" for token in sent)
-    
+
     # Exclude very short fragments and questions (which aren't usually 'claims')
     is_not_short = len(sent) > 4
     is_not_question = not sent.text.strip().endswith('?')
-    
+
     # Look for Entities (Dates, People, Orgs) - these are high-value claims
     has_entities = len(sent.ents) > 0
-    
+
     return (has_subject and has_verb and is_not_short and is_not_question) or has_entities
+
+
+def _parse_verdict_from_text(text: str) -> str:
+    """Parse a verdict category from free-form analysis text."""
+    t = text.lower()
+    has_false = any(w in t for w in ["false", "incorrect", "debunked", "no evidence", "not true", "unfounded"])
+    has_true  = any(w in t for w in ["true", "correct", "accurate", "confirmed", "verified"])
+    has_mixed = any(w in t for w in ["partially", "mixed", "some truth", "partly", "misleading"])
+
+    if has_mixed:
+        return "mixed"
+    if has_false and not has_true:
+        return "false"
+    if has_true and not has_false:
+        return "true"
+    if has_false and has_true:
+        return "mixed"
+    return "unrated"
+
+
+def _build_report_dict(claim: str, all_sources: list, verdict: dict | None,
+                       gemini_analysis: str, tiered: dict) -> dict:
+    """Build a structured report dictionary for the frontend."""
+    from services.credibility_scorer import compute_confidence, score_single_source
+
+    # Determine verdict category and summary
+    category = "unrated"
+    summary = "No conclusion could be reached."
+    if verdict:
+        category = verdict.get("category", "unrated")
+        summary  = verdict.get("summary", "")
+    elif gemini_analysis:
+        category = _parse_verdict_from_text(gemini_analysis)
+        summary  = gemini_analysis[:300]
+
+    # Credibility score
+    if tiered["raw_google_claims"] and verdict:
+        score = compute_confidence(tiered["raw_google_claims"], verdict)
+    else:
+        valid_urls = [s["url"] for s in all_sources if s.get("url")]
+        if valid_urls:
+            score = round(
+                sum(score_single_source(u) for u in valid_urls) / len(valid_urls), 1
+            )
+        else:
+            score = 40.0
+
+    # Normalise sources
+    normalised = []
+    for src in all_sources:
+        preview = src.get("preview", "") or "No preview available."
+        normalised.append({
+            "url":             src.get("url", ""),
+            "title":           src.get("title", "Unknown Source"),
+            "quote":           preview[:400],
+            "relevance_score": src.get("relevance_score", 0.5),
+            "tier":            src.get("tier", "web_search"),
+            "tier_label":      src.get("tier_label", "Web Search"),
+            "publisher":       src.get("publisher", ""),
+            "rating":          src.get("rating", ""),
+        })
+
+    return {
+        "claim":           claim,
+        "verdict":         category,
+        "credibility_score": score,
+        "summary":         summary,
+        "sources":         normalised,
+        "source_count":    len(normalised),
+        "sources_by_tier": tiered["sources_by_tier"],
+        "tiers_searched":  tiered["tiers_searched"],
+        "analysis_notes":  gemini_analysis[:500] if gemini_analysis else "",
+    }
+
+
+def _save_source_to_db(claim_id: int, url: str, title: str, info: str, source_type) -> None:
+    """Upsert a source and link it to a claim; add a citation if info is provided."""
+    from models.models import Source, Citation, ClaimSourceLink
+    if not url:
+        return
+    try:
+        existing = Source.query.filter_by(url=url).first()
+        if existing:
+            source = existing
+        else:
+            source = Source(url=url, title=title or "Unknown", source_type=source_type)
+            db.session.add(source)
+            db.session.flush()
+
+        existing_link = ClaimSourceLink.query.filter_by(
+            claimID=claim_id, sourceID=source.sourceID
+        ).first()
+        if not existing_link:
+            db.session.add(ClaimSourceLink(claimID=claim_id, sourceID=source.sourceID))
+
+        if info:
+            db.session.add(Citation(
+                claimID=claim_id, sourceID=source.sourceID,
+                info_used=info[:500]
+            ))
+    except Exception as e:
+        print(f"[DB] _save_source_to_db error: {e}")
 
 
 @app.route('/fact-check', methods=['POST'])
@@ -220,9 +322,9 @@ def handle_fact_check():
     if not query:
         return jsonify({"status": "error", "message": "No query"}), 400
 
-    # Try to identify the logged-in user from the token
     from routes.auth import _decode_token
     from services.claim_service import create_claim
+    from services.tiered_search import run_tiered_search
 
     auth_header = request.headers.get('Authorization', '')
     token = auth_header.removeprefix('Bearer ').strip()
@@ -237,41 +339,41 @@ def handle_fact_check():
     all_results = []
 
     for search_term in relevant_sentences[:4]:
-        params = {
-            "query": search_term,
-            "key": GOOGLE_API_KEY,
-            "languageCode": "en"
-        }
-
         try:
-            response = requests.get(GOOGLE_URL, params=params)
-            data = response.json()
-            google_claims = data.get('claims', [])
+            # ── Tiered source discovery ──────────────────────────────────────
+            tiered = run_tiered_search(search_term)
+            raw_google_claims = tiered["raw_google_claims"]
+            all_sources       = tiered["all_sources"]
+            gemini_analysis   = tiered.get("gemini_analysis", "")
 
-            if google_claims:
-                enriched_claims = enrich_reviews(google_claims)
+            # ── Backward-compat verdict from Google (Tier 2) ────────────────
+            enriched_claims = []
+            verdict = None
+            if raw_google_claims:
+                enriched_claims = enrich_reviews(raw_google_claims)
                 verdict = build_verdict(enriched_claims)
-                all_results.append({
-                    "original_claim": search_term,
-                    "fact_checks": enriched_claims,
-                    "verdict": verdict
-                })
-            else:
-                all_results.append({
-                    "original_claim": search_term,
-                    "fact_checks": [],
-                    "verdict": None
-                })
+
+            # ── Build structured report ──────────────────────────────────────
+            report = _build_report_dict(search_term, all_sources, verdict, gemini_analysis, tiered)
+
+            all_results.append({
+                "original_claim": search_term,
+                "fact_checks":    enriched_claims,   # backward compat
+                "verdict":        verdict,            # backward compat
+                "report":         report,
+            })
+
         except Exception as e:
             print(f"Error checking sentence: {e}")
             all_results.append({
                 "original_claim": search_term,
-                "fact_checks": [],
-                "verdict": None,
-                "error": str(e)
+                "fact_checks":    [],
+                "verdict":        None,
+                "report":         None,
+                "error":          str(e),
             })
 
-    # Save to DB if user is logged in
+    # ── Persist to DB if user is logged in ───────────────────────────────────
     from models.models import Source, Citation, ClaimSourceLink, SourceType
     if user_id:
         try:
@@ -279,9 +381,8 @@ def handle_fact_check():
             from services.ai_analyzer import analyze_claim
             from services.credibility_scorer import compute_confidence
 
-            claim = create_claim(query, user_id)
+            claim_record = create_claim(query, user_id)
 
-            # Check if any result had a Google verdict
             has_google_verdict = any(r.get("verdict") for r in all_results)
 
             if has_google_verdict:
@@ -291,17 +392,17 @@ def handle_fact_check():
                             result.get("fact_checks", []),
                             result["verdict"],
                         )
-                        fc = create_fact_check(claim.claimID, user_id, result["verdict"], score)
-                        if fc and claim.status is None:
-                            claim.status = fc.verdict
+                        fc = create_fact_check(claim_record.claimID, user_id, result["verdict"], score)
+                        if fc and claim_record.status is None:
+                            claim_record.status = fc.verdict
                             db.session.commit()
             else:
-                # Fallback to LLM when Google returns nothing
+                # Fallback to LLM when no structured verdict exists
                 ai_result = analyze_claim(query)
                 if ai_result:
-                    from models.models import FactCheck, db
+                    from models.models import FactCheck
                     record = FactCheck(
-                        claimID=claim.claimID,
+                        claimID=claim_record.claimID,
                         userID=user_id,
                         verdict=ai_result["verdict"],
                         confidence_score=ai_result["confidence_score"],
@@ -309,53 +410,43 @@ def handle_fact_check():
                         checked_via=ai_result["checked_via"],
                     )
                     db.session.add(record)
-                    claim.status = ai_result["verdict"]
+                    claim_record.status = ai_result["verdict"]
                     db.session.commit()
 
-            # Save sources from Google results
-            print(f"DEBUG: Saving sources for {len(all_results)} results")
+            # Save all sources (Tier 2 Google + Tier 3/4)
+            TIER_TYPE_MAP = {
+                "cached_db":         SourceType.OTHER,
+                "expert_fact_check": SourceType.NEWS,
+                "web_scrape":        SourceType.GOVERNMENT,
+                "web_search":        SourceType.NEWS,
+            }
+
             for result in all_results:
-                for fact_check_item in result.get("fact_checks", []):
-                    for review in fact_check_item.get("claimReview", []):
-                        publisher_name = review.get("publisher", {}).get("name", "Unknown")
-                        review_url = review.get("url", "")
-                        rating_text = review.get("textualRating", "")
-
-                        if not review_url:
-                            continue
-
-                        # Reuse existing source if URL already exists
-                        existing_source = Source.query.filter_by(url=review_url).first()
-                        if existing_source:
-                            source = existing_source
-                        else:
-                            source = Source(
-                                url=review_url,
-                                title=publisher_name,
-                                source_type=SourceType.NEWS,
-                            )
-                            db.session.add(source)
-                            db.session.flush()  # get sourceID before linking
-
-                        # Link source to claim (skip if already linked)
-                        existing_link = ClaimSourceLink.query.filter_by(
-                            claimID=claim.claimID,
-                            sourceID=source.sourceID
-                        ).first()
-                        if not existing_link:
-                            link = ClaimSourceLink(
-                                claimID=claim.claimID,
-                                sourceID=source.sourceID
-                            )
-                            db.session.add(link)
-
-                        # Create citation with the rating text
-                        citation = Citation(
-                            claimID=claim.claimID,
-                            sourceID=source.sourceID,
-                            info_used=rating_text
+                # Tier 2 – Google claimReview sources
+                for fc_item in result.get("fact_checks", []):
+                    for review in fc_item.get("claimReview", []):
+                        _save_source_to_db(
+                            claim_record.claimID,
+                            review.get("url", ""),
+                            review.get("publisher", {}).get("name", "Unknown"),
+                            review.get("textualRating", ""),
+                            SourceType.NEWS,
                         )
-                        db.session.add(citation)
+
+                # Tier 1 / 3 / 4 sources from the report
+                report = result.get("report") or {}
+                for src in report.get("sources", []):
+                    url = src.get("url", "")
+                    if not url or url.startswith("cited://"):
+                        continue
+                    tier = src.get("tier", "web_search")
+                    _save_source_to_db(
+                        claim_record.claimID,
+                        url,
+                        src.get("title", "Unknown"),
+                        src.get("quote", ""),
+                        TIER_TYPE_MAP.get(tier, SourceType.OTHER),
+                    )
 
             db.session.commit()
 
@@ -371,4 +462,3 @@ if __name__ == "__main__":
         #from services.seed_admins import seed_admins
         #seed_admins()
     app.run(debug=True, port=5001)
-

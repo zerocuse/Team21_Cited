@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import "./SearchUpdated.css";
+import { ReportSection, verdictIcon } from "../shared/FactReport";
 
 function getSettings() {
 	try {
@@ -99,18 +100,6 @@ function SearchUpdated() {
 		}
 	};
 
-	const verdictIcon = (category) => {
-		switch (category) {
-			case "true":
-				return "✅";
-			case "false":
-				return "❌";
-			case "mixed":
-				return "⚠️";
-			default:
-				return "ℹ️";
-		}
-	};
 
 	return (
 		<>
@@ -207,7 +196,9 @@ function SearchUpdated() {
 				{results.map((item, index) => {
 					const s = getSettings();
 					const verdict = item.verdict;
+					const report  = item.report;
 					const factChecks = (item.fact_checks || []).slice(0, s.resultsPerClaim ?? 5);
+					const showLinks = s.showSourceLinks ?? true;
 
 					return (
 						<div key={index} className="result-card">
@@ -216,9 +207,9 @@ function SearchUpdated() {
 								<h4>{item.original_claim}</h4>
 							</div>
 
+							{/* ── Verdict summary (backward-compat Google path) ── */}
 							{factChecks.length > 0 ? (
 								<>
-									{/*Summary Verdict */}
 									{verdict && (
 										<div className={`verdict-summary verdict-${verdict.category}`}>
 											<div className="verdict-headline">
@@ -243,6 +234,7 @@ function SearchUpdated() {
 											)}
 										</div>
 									)}
+
 									{factChecks.map((claim, i) => (
 										<div key={i} className="claim-match">
 											<p className="db-claim-text">
@@ -255,7 +247,7 @@ function SearchUpdated() {
 													</span>
 													<span className="original-rating">({review.textualRating})</span>
 													<span className="publisher-name">by {review.publisher.name}</span>
-													{(s.showSourceLinks ?? true) && (
+													{showLinks && (
 														<a
 															href={review.url}
 															target="_blank"
@@ -270,13 +262,28 @@ function SearchUpdated() {
 									))}
 								</>
 							) : (
-								<div className="verdict-summary verdict-unrated">
-								<div className="verdict-headline">
-									<span className="verdict-icon">🔍</span>
-									<p className="verdict-text">Not enough information — no professional fact-checks found for this claim.</p>
-								</div>
-							</div>
+								/* ── No Google fact-checks – show verdict from report ── */
+								report && report.verdict && report.verdict !== "unrated" ? (
+									<div className={`verdict-summary verdict-${report.verdict}`}>
+										<div className="verdict-headline">
+											<span className="verdict-icon">{verdictIcon(report.verdict)}</span>
+											<p className="verdict-text">{report.summary}</p>
+										</div>
+									</div>
+								) : (
+									<div className="verdict-summary verdict-unrated">
+										<div className="verdict-headline">
+											<span className="verdict-icon">🔍</span>
+											<p className="verdict-text">
+												No professional fact-checks found — see sources below for context.
+											</p>
+										</div>
+									</div>
+								)
 							)}
+
+							{/* ── Structured report with tiered sources ── */}
+							<ReportSection report={report} showLinks={showLinks} />
 						</div>
 					);
 				})}

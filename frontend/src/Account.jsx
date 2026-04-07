@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import ClaimResults from './ClaimResults'
+import { ReportSection, verdictIcon } from './shared/FactReport'
 import './Account.css'
 
 const API = 'http://127.0.0.1:5001/auth'
@@ -18,6 +18,16 @@ function Account() {
   const [avatarError, setAvatarError] = useState(false)
   const [authReady, setAuthReady]     = useState(false)
   const [history, setHistory]         = useState([])
+  const [expandedIds, setExpandedIds] = useState(new Set())
+
+  const toggleExpand = (id) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const fetchHistory = (token) => {
     fetch(API + '/history', { headers: { 'Authorization': `Bearer ${token}` } })
@@ -231,33 +241,71 @@ function Account() {
 
           <div className="history-section">
             <h3 className="history-header">History</h3>
-            <div className="history-container">
+            <div className="history-list">
               {history.length === 0
                 ? <p style={{ color: '#aaa', fontSize: '0.9rem' }}>No queries yet.</p>
-                : history.map(item => (
-                  <div key={item.id} className="history-placeholder">
-                    <p style={{ fontWeight: 600, color: '#333', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-                      {item.claim_text.length > 100 ? item.claim_text.slice(0, 100) + '…' : item.claim_text}
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      {item.status ? (
-                        <span className={`verdict-badge verdict-badge--${item.status === 'partially true' ? 'mixed' : item.status}`}>
-                          {item.status}
-                        </span>
-                      ) : (
-                        <span className="verdict-badge verdict-badge--unrated">No info</span>
+                : history.map(item => {
+                  const isOpen      = expandedIds.has(item.id)
+                  const statusKey   = item.status === 'partially true' ? 'mixed' : (item.status || 'unrated')
+                  const scoreColor  = item.status === 'true' ? 'green' : item.status === 'false' ? 'red' : item.status ? 'yellow' : 'gray'
+                  const report      = item.report
+                  const hasDetails  = report && (report.sources?.length > 0 || report.summary)
+
+                  return (
+                    <div key={item.id} className={`history-item ${isOpen ? 'history-item--open' : ''}`}>
+                      {/* ── Summary row ── */}
+                      <div
+                        className="history-item-summary"
+                        onClick={() => hasDetails && toggleExpand(item.id)}
+                        style={{ cursor: hasDetails ? 'pointer' : 'default' }}
+                      >
+                        <div className="history-item-left">
+                          <span className="history-verdict-icon">
+                            {verdictIcon(report?.verdict || statusKey)}
+                          </span>
+                          <span className="history-claim-text">
+                            {item.claim_text.length > 120
+                              ? item.claim_text.slice(0, 120) + '…'
+                              : item.claim_text}
+                          </span>
+                        </div>
+                        <div className="history-item-right">
+                          <span className={`verdict-badge verdict-badge--${statusKey}`}>
+                            {item.status || 'No info'}
+                          </span>
+                          {item.confidence_score != null && (
+                            <span className={`score-badge score-badge--${scoreColor}`}>
+                              {Math.round(item.confidence_score)}%
+                            </span>
+                          )}
+                          {item.queried_at && (
+                            <span className="history-date">{item.queried_at}</span>
+                          )}
+                          {hasDetails && (
+                            <span className={`history-expand-icon ${isOpen ? 'open' : ''}`}>
+                              ›
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ── Expanded detail ── */}
+                      {isOpen && report && (
+                        <div className="history-item-detail">
+                          {report.summary && (
+                            <div className={`verdict-summary verdict-${report.verdict || 'unrated'}`}>
+                              <div className="verdict-headline">
+                                <span className="verdict-icon">{verdictIcon(report.verdict)}</span>
+                                <p className="verdict-text">{report.summary}</p>
+                              </div>
+                            </div>
+                          )}
+                          <ReportSection report={report} showLinks={true} />
+                        </div>
                       )}
-                      {item.confidence_score != null ? (
-                        <span className={`score-badge score-badge--${item.status === 'true' ? 'green' : item.status === 'false' ? 'red' : item.status ? 'yellow' : 'gray'}`}>
-                          {Math.round(item.confidence_score)}%
-                        </span>
-                      ) : null}
                     </div>
-                    {item.queried_at && (
-                      <p style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '0.5rem' }}>{item.queried_at}</p>
-                    )}
-                  </div>
-                ))
+                  )
+                })
               }
             </div>
           </div>

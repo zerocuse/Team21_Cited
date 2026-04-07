@@ -266,6 +266,214 @@
   }
 }
 
+/* ─── Structured Report Section ─── */
+
+.report-section {
+  margin-top: 1.25rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+.report-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Credibility bar */
+.credibility-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 1 180px;
+}
+
+.credibility-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.credibility-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.credibility-bar-fill.cred-high  { background: #22c55e; }
+.credibility-bar-fill.cred-med   { background: #eab308; }
+.credibility-bar-fill.cred-warn  { background: #f97316; }
+.credibility-bar-fill.cred-low   { background: #ef4444; }
+
+.credibility-score-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.credibility-score-label.cred-high  { color: #16a34a; }
+.credibility-score-label.cred-med   { color: #ca8a04; }
+.credibility-score-label.cred-warn  { color: #ea580c; }
+.credibility-score-label.cred-low   { color: #dc2626; }
+
+/* Tiers searched chips */
+.tiers-searched {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tier-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+
+/* Analysis notes */
+.analysis-notes {
+  background: #f8fafc;
+  border-left: 3px solid #94a3b8;
+  padding: 0.6rem 0.9rem;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: #374151;
+  line-height: 1.5;
+}
+
+/* Sources section */
+.sources-section {
+  margin-top: 0.5rem;
+}
+
+.sources-heading {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+/* Individual source card */
+.source-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #6b7280;
+  border-radius: 6px;
+  padding: 0.65rem 0.9rem;
+  margin-bottom: 0.55rem;
+}
+
+.source-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.source-title-link {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #4f46e5;
+  text-decoration: none;
+  word-break: break-word;
+}
+.source-title-link:hover { text-decoration: underline; }
+
+.source-title-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.source-publisher {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.source-rating {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.source-rating.expert {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.source-preview {
+  margin: 0.45rem 0 0;
+  padding: 0.4rem 0.6rem;
+  background: #f8fafc;
+  border-left: 2px solid #d1d5db;
+  border-radius: 3px;
+  font-size: 0.82rem;
+  color: #4b5563;
+  line-height: 1.55;
+  font-style: normal;
+  word-break: break-word;
+}
+
+/* ── Tier colour palette ── */
+
+/* Tier badge (inline label) */
+.tier-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+/* Cached DB – indigo */
+.tier-cached .tier-badge,
+.tier-chip.tier-cached {
+  background: #ede9fe;
+  color: #4338ca;
+  border-color: #4338ca;
+}
+.source-card.tier-cached { border-left-color: #4338ca; }
+
+/* Expert Fact Check – sky blue */
+.tier-expert .tier-badge,
+.tier-chip.tier-expert {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #0369a1;
+}
+.source-card.tier-expert { border-left-color: #0369a1; }
+
+/* Primary Document / web-scrape – emerald */
+.tier-scrape .tier-badge,
+.tier-chip.tier-scrape {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #15803d;
+}
+.source-card.tier-scrape { border-left-color: #15803d; }
+
+/* Web Search – slate */
+.tier-websearch .tier-badge,
+.tier-chip.tier-websearch {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #475569;
+}
+.source-card.tier-websearch { border-left-color: #475569; }
+
 
 
 

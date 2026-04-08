@@ -1,6 +1,4 @@
 import { useState, useRef, useEffect } from 'react'
-import ClaimResults from './ClaimResults'
-import CredibilityScore from './CredibilityScore'
 import './Account.css'
 
 const API = 'http://127.0.0.1:5001/auth'
@@ -235,22 +233,30 @@ function Account() {
                     <p style={{ fontWeight: 600, color: '#333', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
                       {item.claim_text.length > 100 ? item.claim_text.slice(0, 100) + '…' : item.claim_text}
                     </p>
-                    <CredibilityScore claimId={item.id} />
-                    {item.status && (
+                    {item.verdict && (
                       <span style={{
                         fontSize: '0.75rem',
                         padding: '2px 8px',
                         borderRadius: '12px',
-                        background: item.status === 'true' ? '#d4edda' : item.status === 'false' ? '#f8d7da' : '#fff3cd',
-                        color: item.status === 'true' ? '#155724' : item.status === 'false' ? '#721c24' : '#856404',
+                        background: item.verdict === 'true' ? '#d4edda' : item.verdict === 'false' ? '#f8d7da' : '#fff3cd',
+                        color: item.verdict === 'true' ? '#155724' : item.verdict === 'false' ? '#721c24' : '#856404',
                       }}>
-                        {item.status}
+                        {item.verdict}
                       </span>
+                    )}
+                    {item.explanation && (
+                      <p style={{ color: '#555', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                        {item.explanation}
+                      </p>
+                    )}
+                    {item.confidence_score && (
+                      <p style={{ color: '#888', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                        Confidence: {item.confidence_score}%
+                      </p>
                     )}
                     {item.queried_at && (
                       <p style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '0.5rem' }}>{item.queried_at}</p>
                     )}
-                    <ClaimResults claimId={item.id} />
                   </div>
                 ))
               }

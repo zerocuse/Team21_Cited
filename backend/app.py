@@ -272,39 +272,85 @@ def handle_fact_check():
             })
 
     # Save to DB if user is logged in
-    # Save to DB if user is logged in
-        if user_id:
-            try:
-                from services.fact_check_service import create_fact_check
-                from services.ai_analyzer import analyze_claim
+    from models.models import Source, Citation, ClaimSourceLink, SourceType
+    if user_id:
+        try:
+            from services.fact_check_services import create_fact_check
+            from services.ai_analyzer import analyze_claim
 
-                claim = create_claim(query, user_id)
+            claim = create_claim(query, user_id)
 
-                # Check if any result had a Google verdict
-                has_google_verdict = any(r.get("verdict") for r in all_results)
+            has_google_verdict = any(r.get("verdict") for r in all_results)
 
-                if has_google_verdict:
-                    for result in all_results:
-                        if result.get("verdict"):
-                            create_fact_check(claim.claimID, user_id, result["verdict"])
-                else:
-                    # Fallback to LLM when Google returns nothing
-                    ai_result = analyze_claim(query)
-                    if ai_result:
-                        from models.models import FactCheck, db
-                        record = FactCheck(
+            if has_google_verdict:
+                for result in all_results:
+                    if result.get("verdict"):
+                        create_fact_check(claim.claimID, user_id, result["verdict"])
+            else:
+                ai_result = analyze_claim(query)
+                if ai_result:
+                    from models.models import FactCheck
+                    record = FactCheck(
+                        claimID=claim.claimID,
+                        userID=user_id,
+                        verdict=ai_result["verdict"],
+                        confidence_score=ai_result["confidence_score"],
+                        explanation=ai_result["explanation"],
+                        checked_via=ai_result["checked_via"],
+                    )
+                    db.session.add(record)
+
+            # Save sources from Google results
+            print(f"DEBUG: Saving sources for {len(all_results)} results")
+            for result in all_results:
+                for fact_check_item in result.get("fact_checks", []):
+                    for review in fact_check_item.get("claimReview", []):
+                        publisher_name = review.get("publisher", {}).get("name", "Unknown")
+                        review_url = review.get("url", "")
+                        rating_text = review.get("textualRating", "")
+
+                        if not review_url:
+                            continue
+
+                        # Reuse existing source if URL already exists
+                        existing_source = Source.query.filter_by(url=review_url).first()
+                        if existing_source:
+                            source = existing_source
+                        else:
+                            source = Source(
+                                url=review_url,
+                                title=publisher_name,
+                                source_type=SourceType.NEWS,
+                            )
+                            db.session.add(source)
+                            db.session.flush()  # get sourceID before linking
+
+                        # Link source to claim (skip if already linked)
+                        existing_link = ClaimSourceLink.query.filter_by(
                             claimID=claim.claimID,
-                            userID=user_id,
-                            verdict=ai_result["verdict"],
-                            confidence_score=ai_result["confidence_score"],
-                            explanation=ai_result["explanation"],
-                            checked_via=ai_result["checked_via"],
-                        )
-                        db.session.add(record)
-                        db.session.commit()
+                            sourceID=source.sourceID
+                        ).first()
+                        if not existing_link:
+                            link = ClaimSourceLink(
+                                claimID=claim.claimID,
+                                sourceID=source.sourceID
+                            )
+                            db.session.add(link)
 
-            except Exception as e:
-                print(f"Failed to save claim/fact_check: {e}")
+                        # Create citation with the rating text
+                        citation = Citation(
+                            claimID=claim.claimID,
+                            sourceID=source.sourceID,
+                            info_used=rating_text
+                        )
+                        db.session.add(citation)
+
+            db.session.commit()
+
+        except Exception as e:
+            print(f"Failed to save claim/fact_check: {e}")
+
+    return jsonify({"status": "success", "results": all_results})
 
 
 if __name__ == "__main__":

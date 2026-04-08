@@ -172,6 +172,9 @@ function Account() {
           <div className="account-header-container">
             <h1 className="account-header">Account</h1>
             <button className="login-button" onClick={handleLogout}>Log Out</button>
+            {user.membership_status === 'admin' && (
+  <a href="/admin" style={{ marginLeft: '1rem' }}>Admin Panel</a>
+)}
           </div>
 
           <div className="profile-card">

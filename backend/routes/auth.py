@@ -55,8 +55,11 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
-    token = _make_token(new_user.userID)
-    return jsonify({'token': token, 'user': new_user.to_dict()}), 201
+    token = _make_token(user.userID)
+    response = {'token': token, 'user': user.to_dict()}
+    if user.to_dict().get('membership_status') == 'admin':
+        response['is_admin'] = True
+    return jsonify(response), 200
 
 
 @auth_bp.route('/login', methods=['POST'])

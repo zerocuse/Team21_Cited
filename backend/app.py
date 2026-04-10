@@ -6,7 +6,7 @@ from flask_cors import CORS
 import spacy
 from models import *
 from flask_sqlalchemy import SQLAlchemy
-
+from services.claim_comparator import compare_claims, invert_rating_category, invert_condensed_rating
 
 
 
@@ -148,40 +148,41 @@ def classify_rating(condensed):
 def build_verdict(fact_checks):
     if not fact_checks:
         return None
-#Ratings
-    condensed_map = {}  
+
+    category_counts = {}
     total = 0
 
     for claim in fact_checks:
         for review in claim.get("claimReview", []):
-            original = review.get("textualRating", "")
-            condensed = condense_rating(original)
-            condensed_map[condensed] = condensed_map.get(condensed, 0) + 1
+            # Use already-enriched and inverted category if available
+            category = review.get("ratingCategory")
+            if not category:
+                original = review.get("textualRating", "")
+                condensed = condense_rating(original)
+                category = classify_rating(condensed)
+            category_counts[category] = category_counts.get(category, 0) + 1
             total += 1
 
     if total == 0:
         return None
 
-    # frequent rating wins
-    sorted_ratings = sorted(condensed_map.items(), key=lambda x: x[1], reverse=True)
-    top_rating = sorted_ratings[0][0]
-    category = classify_rating(top_rating)
+    sorted_categories = sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
+    top_category = sorted_categories[0][0]
 
-    #Summary 
     source_word = "source" if total == 1 else "sources"
     summaries = {
-        "true": f"Rated '{top_rating}' by {total} {source_word}. Claim appears credible.",
-        "false": f"Rated '{top_rating}' by {total} {source_word}. Claim appears unfounded.",
-        "mixed": f"Rated '{top_rating}' by {total} {source_word}. Claim has mixed support.",
-        "unrated": f"Rated '{top_rating}' by {total} {source_word}. Verdict unclear.",
+        "true":    f"Rated 'true' by {total} {source_word}. Claim appears credible.",
+        "false":   f"Rated 'false' by {total} {source_word}. Claim appears unfounded.",
+        "mixed":   f"Rated 'mixed' by {total} {source_word}. Claim has mixed support.",
+        "unrated": f"Rated 'unrated' by {total} {source_word}. Verdict unclear.",
     }
 
     return {
-        "topRating": top_rating,
-        "category": category,
+        "topRating":    top_category,
+        "category":     top_category,
         "totalReviews": total,
-        "breakdown": condensed_map,
-        "summary": summaries.get(category, summaries["unrated"]),
+        "breakdown":    category_counts,
+        "summary":      summaries.get(top_category, summaries["unrated"]),
     }
 
 
@@ -247,9 +248,39 @@ def handle_fact_check():
             response = requests.get(GOOGLE_URL, params=params)
             data = response.json()
             google_claims = data.get('claims', [])
+            print(f"DEBUG: search_term='{search_term}', API key present={bool(GOOGLE_API_KEY)}, status={response.status_code}, claims_count={len(google_claims)}")
+
 
             if google_claims:
+                
+                # ── Compare & filter/invert ratings ──
+                for claim in google_claims[:]:  # iterate over a COPY
+                    matched_text = claim.get("text", "")
+                    if not matched_text:
+                        continue
+
+                    relationship = compare_claims(search_term, matched_text)
+
+                    if relationship == "UNRELATED":
+                        google_claims.remove(claim)
+                    elif relationship == "OPPOSITE":
+                        for review in claim.get("claimReview", []):
+                            review["_inverted"] = True
+
+                # Now enrich (condense + classify) as before
                 enriched_claims = enrich_reviews(google_claims)
+
+                # ── NEW: Apply inversion to enriched ratings ──
+                for claim in enriched_claims:
+                    for review in claim.get("claimReview", []):
+                        if review.get("_inverted"):
+                            review["condensedRating"] = invert_condensed_rating(
+                                review["condensedRating"]
+                            )
+                            review["ratingCategory"] = invert_rating_category(
+                                review["ratingCategory"]
+                            )
+
                 verdict = build_verdict(enriched_claims)
                 all_results.append({
                     "original_claim": search_term,

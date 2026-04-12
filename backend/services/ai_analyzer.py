@@ -1,28 +1,22 @@
 import os
 import json
-import anthropic
+import google.generativeai as genai
 from models.models import VerificationStatus, CheckedVia
 
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-2.0-flash")
 
 VERDICT_MAP = {
-    "true":          VerificationStatus.TRUE,
-    "false":         VerificationStatus.FALSE,
+    "true":           VerificationStatus.TRUE,
+    "false":          VerificationStatus.FALSE,
     "partially_true": VerificationStatus.PARTIALLY_TRUE,
 }
 
+
 def analyze_claim(claim: str) -> dict | None:
     """
-    Sends a claim to Claude and returns a structured verdict dict,
+    Sends a claim to Gemini and returns a structured verdict dict,
     or None if the API call fails.
-
-    Returns:
-        {
-            "verdict":          VerificationStatus,
-            "confidence_score": float (0-100),
-            "explanation":      str,
-            "checked_via":      CheckedVia.LLM,
-        }
     """
     prompt = f"""You are a fact-checking assistant. Analyze the following claim and respond ONLY with a JSON object — no preamble, no markdown.
 
@@ -36,12 +30,10 @@ Respond with exactly this structure:
 }}"""
 
     try:
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=256,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        raw = message.content[0].text.strip()
+        response = model.generate_content(prompt)
+        raw = response.text.strip()
+        # Strip markdown fences if present
+        raw = raw.replace("```json", "").replace("```", "").strip()
         data = json.loads(raw)
 
         verdict_str = data.get("verdict", "").lower()
@@ -57,5 +49,5 @@ Respond with exactly this structure:
         }
 
     except Exception as e:
-        print(f"[ai_analyzer] Error: {e}")
+        print(f"[ai_analyzer] Gemini error: {e}")
         return None

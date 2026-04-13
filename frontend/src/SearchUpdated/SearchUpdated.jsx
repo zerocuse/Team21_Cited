@@ -1,6 +1,9 @@
 import { useState, useRef } from "react";
 import "./SearchUpdated.css";
+<<<<<<< HEAD
 import { ReportSection, verdictIcon } from "../shared/FactReport";
+=======
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
 function getSettings() {
 	try {
@@ -18,7 +21,10 @@ function SearchUpdated() {
 	const [results, setResults] = useState([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [word_count_error, set_word_count_Error] = useState("");
+<<<<<<< HEAD
 	const [rejectionMsg, setRejectionMsg] = useState("");
+=======
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 	const resultsRef = useRef(null);
 
 	const handleSubmit = async (e) => {
@@ -33,7 +39,10 @@ function SearchUpdated() {
 			return;
 		}
 		set_word_count_Error("");
+<<<<<<< HEAD
 		setRejectionMsg("");
+=======
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 		if (isLoading) return;
 
 		setIsLoading(true);
@@ -49,6 +58,7 @@ function SearchUpdated() {
     			headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     			body: formData,
 			});
+<<<<<<< HEAD
 			if (response.status === 422) {
 				const err = await response.json();
 				setRejectionMsg(err.message || "This claim cannot be fact-checked.");
@@ -58,6 +68,11 @@ function SearchUpdated() {
 			if (!response.ok) throw new Error(`Server responded with ${response.status}`);
 			const data = await response.json();
 			setResults(Array.isArray(data) ? data : []);
+=======
+			if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+			const data = await response.json();
+			setResults(data.results || []);
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 			if ((s.autoScroll ?? false) && resultsRef.current) {
 				setTimeout(() => resultsRef.current.scrollIntoView({ behavior: 'smooth' }), 100);
 			}
@@ -108,6 +123,21 @@ function SearchUpdated() {
 		}
 	};
 
+<<<<<<< HEAD
+=======
+	const verdictIcon = (category) => {
+		switch (category) {
+			case "true":
+				return "✅";
+			case "false":
+				return "❌";
+			case "mixed":
+				return "⚠️";
+			default:
+				return "ℹ️";
+		}
+	};
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
 	return (
 		<>
@@ -155,7 +185,10 @@ function SearchUpdated() {
 					rows="3"
 				/>
 				{word_count_error && <div className="word_count"> ⚠️ {word_count_error}</div>}
+<<<<<<< HEAD
 			{rejectionMsg && <div className="rejection-msg">⚠️ {rejectionMsg}</div>}
+=======
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 				{uploadedFile && (
 					<div className="uploaded-file">
 						<span className="file-name">{uploadedFile.name}</span>
@@ -205,9 +238,13 @@ function SearchUpdated() {
 				{results.map((item, index) => {
 					const s = getSettings();
 					const verdict = item.verdict;
+<<<<<<< HEAD
 					const report  = item.report;
 					const factChecks = (item.fact_checks || []).slice(0, s.resultsPerClaim ?? 5);
 					const showLinks = s.showSourceLinks ?? true;
+=======
+					const factChecks = (item.fact_checks || []).slice(0, s.resultsPerClaim ?? 5);
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
 					return (
 						<div key={index} className="result-card">
@@ -216,9 +253,15 @@ function SearchUpdated() {
 								<h4>{item.original_claim}</h4>
 							</div>
 
+<<<<<<< HEAD
 							{/* ── Verdict summary (backward-compat Google path) ── */}
 							{factChecks.length > 0 ? (
 								<>
+=======
+							{factChecks.length > 0 ? (
+								<>
+									{/*Summary Verdict */}
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 									{verdict && (
 										<div className={`verdict-summary verdict-${verdict.category}`}>
 											<div className="verdict-headline">
@@ -243,7 +286,10 @@ function SearchUpdated() {
 											)}
 										</div>
 									)}
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 									{factChecks.map((claim, i) => (
 										<div key={i} className="claim-match">
 											<p className="db-claim-text">
@@ -256,7 +302,11 @@ function SearchUpdated() {
 													</span>
 													<span className="original-rating">({review.textualRating})</span>
 													<span className="publisher-name">by {review.publisher.name}</span>
+<<<<<<< HEAD
 													{showLinks && (
+=======
+													{(s.showSourceLinks ?? true) && (
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 														<a
 															href={review.url}
 															target="_blank"
@@ -271,6 +321,7 @@ function SearchUpdated() {
 									))}
 								</>
 							) : (
+<<<<<<< HEAD
 								/* ── No Google fact-checks – show verdict from report ── */
 								report && report.verdict && report.verdict !== "unrated" ? (
 									<div className={`verdict-summary verdict-${report.verdict}`}>
@@ -293,6 +344,10 @@ function SearchUpdated() {
 
 							{/* ── Structured report with tiered sources ── */}
 							<ReportSection report={report} showLinks={showLinks} />
+=======
+								<p className="no-results">No professional fact-checks found for this claim.</p>
+							)}
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 						</div>
 					);
 				})}

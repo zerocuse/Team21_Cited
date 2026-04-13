@@ -7,6 +7,7 @@ CATEGORY_TO_STATUS = {
     "mixed":   VerificationStatus.PARTIALLY_TRUE,
 }
 
+<<<<<<< HEAD
 def create_fact_check(
     claim_id: int,
     user_id: int,
@@ -19,6 +20,12 @@ def create_fact_check(
 
     confidence_score: if provided (from credibility_scorer), used directly.
                       Falls back to a simple review-count heuristic otherwise.
+=======
+def create_fact_check(claim_id: int, user_id: int, verdict: dict) -> FactCheck | None:
+    """
+    Creates a FactCheck row from a verdict dict returned by build_verdict().
+    Returns None (gracefully) if verdict is None or category is unrated.
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
     """
     if not verdict:
         return None
@@ -27,14 +34,23 @@ def create_fact_check(
     if status is None:
         return None  # unrated — skip without blocking
 
+<<<<<<< HEAD
     if confidence_score is None:
         confidence_score = min(100.0, round(verdict.get("totalReviews", 1) * 25.0, 2))
 
+=======
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
     record = FactCheck(
         claimID=claim_id,
         userID=user_id,
         verdict=status,
+<<<<<<< HEAD
         confidence_score=confidence_score,
+=======
+        confidence_score=round(
+            (verdict.get("totalReviews", 1) / max(verdict.get("totalReviews", 1), 1)) * 100, 2
+        ),
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
         explanation=verdict.get("summary"),
         checked_via=CheckedVia.EXISTING_FACT,
     )

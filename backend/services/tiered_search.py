@@ -214,23 +214,23 @@ def _scrape_snippet(url: str, keywords: list[str]) -> str:
         return ""
 
 
-def search_tier3_web_scrape(search_term: str) -> list[dict]:
+def search_tier3_gov_academic(search_term: str) -> list[dict]:
     """
-    Ask Gemini to locate primary-source documents, then enrich each URL
-    with a scraped snippet.
+    Ask Gemini to locate government (.gov, .mil) and academic (.edu) primary
+    sources that directly address the claim.  Only results that pass
+    _is_primary_source() are returned — no fallback to .org or general sites.
     """
     prompt = (
-        f'Find official government reports, academic papers, or organisational documents '
-        f'from .gov, .edu, .org, or .mil websites that directly address this claim: '
-        f'"{search_term}". '
-        f'Cite specific factual findings from these authoritative primary sources.'
+        f'Find official government reports, legislative documents, or peer-reviewed '
+        f'academic research from .gov, .mil, or .edu domains that directly verify or '
+        f'refute this claim: "{search_term}". '
+        f'Cite specific factual findings from government agencies and academic institutions only.'
     )
     data = _gemini_search(prompt)
-    _, sources = _parse_gemini_response(data, "web_scrape", "Primary Document")
+    _, sources = _parse_gemini_response(data, "web_scrape", "Official Document")
 
+    # Strict filter: only genuine government / academic sources
     primary = [s for s in sources if _is_primary_source(s["url"])]
-    if not primary and sources:
-        primary = sources[:2]
 
     keywords = [w.lower() for w in search_term.split() if len(w) > 3]
     for src in primary[:3]:
@@ -280,23 +280,42 @@ def search_tier4_web_search(search_term: str) -> tuple[list[dict], str]:
 ALL_METHODS = {"web-scrape", "cited-database", "expert-driven"}
 
 
+def _google_claims_are_conclusive(raw_claims: list) -> bool:
+    """
+    Return True when at least one Google Fact Check review carries an
+    explicit, non-trivial textual rating.  An empty or 'unrated' rating
+    means the claim is not yet settled.
+    """
+    _SKIP = {"", "unrated", "n/a", "none", "no rating"}
+    for claim in raw_claims:
+        for review in claim.get("claimReview", []):
+            rating = review.get("textualRating", "").lower().strip()
+            if rating and rating not in _SKIP:
+                return True
+    return False
+
+
 def run_tiered_search(search_term: str, methods: list[str] | None = None) -> dict:
     """
-    Execute the tiered fact-checking pipeline for one search term.
+    Execute the tiered fact-checking pipeline with strict priority order and
+    early-exit ("settled") gates.
 
-    ``methods`` controls which tiers are active:
-        'cited-database'  →  Tier 1 (cached DB)
-        'expert-driven'   →  Tier 2 (Google Fact Check API)
-        'web-scrape'      →  Tier 3 (primary-document scraping)
-    Tier 4 (Gemini web search) always runs as a last-resort fallback.
-    When ``methods`` is None or empty every tier is enabled.
+    Priority order
+    ──────────────
+    1. Cited Database   – our curated cache; always authoritative → settles on any hit
+    2. Expert-Driven    – Google Fact Check API → settles when a conclusive rating exists
+    3. Official Docs    – gov / academic primary sources (.gov, .mil, .edu) → settles on any hit
+    4. General Web      – Gemini web search; only runs if claim is still unsettled
+                          OR source pool is too thin (< 2 results)
 
-    Returns a dict with:
-        all_sources        – combined normalised source list
-        raw_google_claims  – raw Tier-2 Google API payload (for backward compat)
-        gemini_analysis    – free-text from Tier-4 Gemini (may be "")
-        tiers_searched     – list of tier keys that returned data
-        sources_by_tier    – count of sources per tier
+    The pipeline stops escalating as soon as the claim is settled, preventing
+    low-quality general web results from diluting high-quality authoritative ones.
+
+    ``methods`` controls which named tiers are active:
+        'cited-database'  →  Tier 1
+        'expert-driven'   →  Tier 2
+        'web-scrape'      →  Tier 3 (gov/academic)  +  Tier 4 fallback
+    When ``methods`` is None / empty every tier is enabled.
     """
     if not methods:
         methods = list(ALL_METHODS)
@@ -308,34 +327,42 @@ def run_tiered_search(search_term: str, methods: list[str] | None = None) -> dic
     gemini_analysis: str = ""
     tiers_searched: list[str] = []
     counts = {"cached_db": 0, "expert_fact_check": 0, "web_scrape": 0, "web_search": 0}
+    settled = False   # True once a high-quality source has resolved the claim
 
-    # Tier 1 – cached database (only when 'cited-database' is selected)
+    # ── Tier 1 – Cited Database (highest priority) ────────────────────────────
     if "cited-database" in active:
         t1 = search_tier1_cached_db(search_term)
         if t1:
             all_sources.extend(t1)
             counts["cached_db"] = len(t1)
             tiers_searched.append("cached_db")
+            settled = True   # curated cache is authoritative; no need to escalate
 
-    # Tier 2 – Google Fact Check API (only when 'expert-driven' is selected)
-    if "expert-driven" in active:
+    # ── Tier 2 – Expert / Google Fact Check ──────────────────────────────────
+    if "expert-driven" in active and not settled:
         raw_google_claims, t2 = search_tier2_google_fact_check(search_term)
         if t2:
             all_sources.extend(t2)
             counts["expert_fact_check"] = len(t2)
             tiers_searched.append("expert_fact_check")
+            if _google_claims_are_conclusive(raw_google_claims):
+                settled = True
 
-    # Tier 3 – primary-document scraping (only when 'web-scrape' is selected
-    #           and the source pool is still sparse)
-    if "web-scrape" in active and len(all_sources) < 3:
-        t3 = search_tier3_web_scrape(search_term)
+    # ── Tier 3 – Official Government & Academic Documents ────────────────────
+    # Runs only when earlier tiers haven't settled the claim.
+    # Does NOT fall back to general .org / .com sources — strictly gov/academic.
+    if "web-scrape" in active and not settled:
+        t3 = search_tier3_gov_academic(search_term)
         if t3:
             all_sources.extend(t3)
             counts["web_scrape"] = len(t3)
             tiers_searched.append("web_scrape")
+            settled = True   # official government/academic docs are authoritative
 
-    # Tier 4 – general web search (always available as a final fallback)
-    if len(all_sources) < 2:
+    # ── Tier 4 – General Web Search (last resort) ─────────────────────────────
+    # Runs only when the claim is still unsettled OR we have too few sources.
+    # Kept as a fallback so claims with no structured data still get an analysis.
+    if not settled or len(all_sources) < 2:
         t4, gemini_analysis = search_tier4_web_search(search_term)
         if t4:
             all_sources.extend(t4)
@@ -343,9 +370,10 @@ def run_tiered_search(search_term: str, methods: list[str] | None = None) -> dic
             tiers_searched.append("web_search")
 
     return {
-        "all_sources": all_sources,
+        "all_sources":      all_sources,
         "raw_google_claims": raw_google_claims,
-        "gemini_analysis": gemini_analysis,
-        "tiers_searched": tiers_searched,
-        "sources_by_tier": counts,
+        "gemini_analysis":  gemini_analysis,
+        "tiers_searched":   tiers_searched,
+        "sources_by_tier":  counts,
+        "settled":          settled,
     }

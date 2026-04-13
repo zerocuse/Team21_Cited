@@ -145,40 +145,71 @@ def classify_rating(condensed):
 
 
 def build_verdict(fact_checks):
+    """
+    Build a credibility-weighted verdict from a list of Google Fact Check claims.
+
+    Each review's vote is multiplied by its source's credibility weight so that
+    a single authoritative source (government, established fact-checker) can
+    outweigh a large number of low-quality sources.
+    """
     if not fact_checks:
         return None
 
-    condensed_map = {}
-    total = 0
+    from services.credibility_scorer import score_single_source, credibility_weight
+
+    # count_map  : {condensed_rating: raw_count}   – used for UI breakdown display
+    # weight_map : {condensed_rating: total_weight} – used for winner selection
+    # cat_weight : {category: total_weight}         – used to pick winning category
+    count_map: dict[str, int] = {}
+    weight_map: dict[str, float] = {}
+    cat_weight: dict[str, float] = {}
+    total_reviews = 0
 
     for claim in fact_checks:
         for review in claim.get("claimReview", []):
-            original = review.get("textualRating", "")
-            condensed = condense_rating(original)
-            condensed_map[condensed] = condensed_map.get(condensed, 0) + 1
-            total += 1
+            url       = review.get("url", "")
+            publisher = review.get("publisher", {}).get("name", "")
+            cred      = score_single_source(url, publisher)
+            w         = credibility_weight(cred)
 
-    if total == 0:
+            original  = review.get("textualRating", "")
+            condensed = condense_rating(original)
+            category  = classify_rating(condensed)
+
+            count_map[condensed]  = count_map.get(condensed, 0) + 1
+            weight_map[condensed] = weight_map.get(condensed, 0.0) + w
+            cat_weight[category]  = cat_weight.get(category, 0.0) + w
+            total_reviews += 1
+
+    if total_reviews == 0:
         return None
 
-    sorted_ratings = sorted(condensed_map.items(), key=lambda x: x[1], reverse=True)
-    top_rating = sorted_ratings[0][0]
-    category = classify_rating(top_rating)
+    # Winning category = highest credibility-weighted total
+    best_category = max(cat_weight, key=lambda c: cat_weight[c])
 
-    source_word = "source" if total == 1 else "sources"
+    # Best condensed rating within the winning category (highest weight)
+    cat_ratings = {r: weight_map[r] for r in weight_map if classify_rating(r) == best_category}
+    top_rating  = max(cat_ratings, key=cat_ratings.get) if cat_ratings else best_category
+
+    # Dominance: % of total credibility weight held by the winning category
+    total_weight = sum(cat_weight.values())
+    dominance = round((cat_weight[best_category] / total_weight) * 100, 1) if total_weight > 0 else 50.0
+
+    source_word = "source" if total_reviews == 1 else "sources"
     summaries = {
-        "true":    f"Rated '{top_rating}' by {total} {source_word}. Claim appears credible.",
-        "false":   f"Rated '{top_rating}' by {total} {source_word}. Claim appears unfounded.",
-        "mixed":   f"Rated '{top_rating}' by {total} {source_word}. Claim has mixed support.",
-        "unrated": f"Rated '{top_rating}' by {total} {source_word}. Verdict unclear.",
+        "true":    f"Rated '{top_rating}' by {total_reviews} {source_word} ({dominance:.0f}% credibility-weighted consensus). Claim appears credible.",
+        "false":   f"Rated '{top_rating}' by {total_reviews} {source_word} ({dominance:.0f}% credibility-weighted consensus). Claim appears unfounded.",
+        "mixed":   f"Rated '{top_rating}' by {total_reviews} {source_word} ({dominance:.0f}% credibility-weighted consensus). Claim has mixed support.",
+        "unrated": f"Rated '{top_rating}' by {total_reviews} {source_word}. Verdict unclear.",
     }
 
     return {
-        "topRating": top_rating,
-        "category": category,
-        "totalReviews": total,
-        "breakdown": condensed_map,
-        "summary": summaries.get(category, summaries["unrated"]),
+        "topRating":    top_rating,
+        "category":     best_category,
+        "totalReviews": total_reviews,
+        "breakdown":    count_map,   # raw counts for UI display
+        "dominance":    dominance,   # credibility-weighted consensus % for confidence calc
+        "summary":      summaries.get(best_category, summaries["unrated"]),
     }
 
 
@@ -315,9 +346,15 @@ def _build_report_dict(claim: str, all_sources: list, verdict: dict | None,
         category = _parse_verdict_from_text(gemini_analysis)
         summary  = gemini_analysis[:300]
 
-    # Credibility score
+    # Credibility score — use weighted verdict dominance when available,
+    # otherwise fall back to average source credibility
     if tiered["raw_google_claims"] and verdict:
         score = compute_confidence(tiered["raw_google_claims"], verdict)
+    elif verdict and verdict.get("dominance") is not None:
+        # Verdict came from cached DB or gov docs; use dominance directly
+        from services.credibility_scorer import compute_source_credibility
+        src_cred = compute_source_credibility(tiered.get("raw_google_claims", []))
+        score = round(min(100.0, src_cred * 0.65 + verdict["dominance"] * 0.35), 2)
     else:
         valid_urls = [s["url"] for s in all_sources if s.get("url")]
         if valid_urls:

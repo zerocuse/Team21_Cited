@@ -115,6 +115,33 @@ def _score_publisher_name(name: str) -> float | None:
 
 # ----- public API ------------------------------------------------------------
 
+def credibility_weight(score: float) -> float:
+    """
+    Convert a numeric credibility score into a vote weight used by the
+    verdict algorithm.  The scale is deliberately steep so that one
+    high-authority source can outweigh many low-quality ones.
+
+    Tier weights (approximate real-world ratios):
+      gov / primary docs  (≥ 88)  → 16 ×   – e.g. 1 .gov beats ~15 .com sites
+      fact-checkers / academic (≥ 78)  → 8 ×
+      reputable news      (≥ 65)  → 3 ×
+      general commercial  (≥ 50)  → 1 ×   (baseline)
+      low-quality blogs   (≥ 35)  → 0.25 ×
+      social media / junk (< 35)  → 0.1 ×
+    """
+    if score >= 88:
+        return 16.0
+    if score >= 78:
+        return 8.0
+    if score >= 65:
+        return 3.0
+    if score >= 50:
+        return 1.0
+    if score >= 35:
+        return 0.25
+    return 0.1
+
+
 def score_single_source(url: str, publisher_name: str = "") -> float:
     """
     Score one source using both its URL and publisher name.
@@ -152,18 +179,13 @@ def compute_confidence(fact_checks: list, verdict: dict) -> float:
     """
     Final confidence score combining:
       • Source credibility  (65 % weight) – quality of the checking organisations
-      • Consensus rate      (35 % weight) – fraction of reviews that agree on the top verdict
+      • Dominance           (35 % weight) – credibility-weighted share held by
+                                            the winning verdict category
 
     Returns a float in [0, 100].
     """
     source_cred = compute_source_credibility(fact_checks)
-
-    total = verdict.get("totalReviews", 0)
-    if total > 0:
-        top_count      = max(verdict.get("breakdown", {}).values(), default=1)
-        consensus_rate = (top_count / total) * 100.0
-    else:
-        consensus_rate = 50.0
-
-    score = source_cred * 0.65 + consensus_rate * 0.35
+    # dominance is pre-computed by build_verdict() as a credibility-weighted %
+    dominance = verdict.get("dominance", 50.0)
+    score = source_cred * 0.65 + dominance * 0.35
     return round(min(100.0, score), 2)

@@ -4,7 +4,11 @@ from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+<<<<<<< HEAD
+from models.models import User, Claim, FactCheck, Source, Citation, ClaimSourceLink, db
+=======
 from models.models import User, Claim, FactCheck, db
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
@@ -55,11 +59,16 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
+<<<<<<< HEAD
+    token = _make_token(new_user.userID)
+    return jsonify({'token': token, 'user': new_user.to_dict()}), 201
+=======
     token = _make_token(user.userID)
     response = {'token': token, 'user': user.to_dict()}
     if user.to_dict().get('membership_status') == 'admin':
         response['is_admin'] = True
     return jsonify(response), 200
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -145,6 +154,24 @@ def history():
         .all()
     )
 
+<<<<<<< HEAD
+    # Maps SourceType value → (tier key, tier label)
+    TYPE_TO_TIER = {
+        'news':         ('expert_fact_check', 'Expert Fact Check'),
+        'academic':     ('web_scrape',        'Primary Document'),
+        'government':   ('web_scrape',        'Primary Document'),
+        'other':        ('cached_db',         'Cited Database Cache'),
+        'social media': ('web_search',        'Web Search'),
+    }
+
+    STATUS_TO_CATEGORY = {
+        'true':          'true',
+        'false':         'false',
+        'partially true': 'mixed',
+    }
+
+=======
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
     results = []
     for c in claims:
         claim_data = c.to_dict()
@@ -157,6 +184,61 @@ def history():
         )
 
         if fact_check:
+<<<<<<< HEAD
+            claim_data['verdict']          = fact_check.verdict.value if fact_check.verdict else None
+            claim_data['confidence_score'] = fact_check.confidence_score
+            claim_data['explanation']      = fact_check.explanation
+            claim_data['checked_via']      = fact_check.checked_via.value if fact_check.checked_via else None
+        else:
+            claim_data['verdict']          = None
+            claim_data['confidence_score'] = None
+            claim_data['explanation']      = None
+            claim_data['checked_via']      = None
+
+        # Build sources list from DB links + citations
+        links = ClaimSourceLink.query.filter_by(claimID=c.claimID).all()
+        source_ids = [lnk.sourceID for lnk in links]
+
+        sources_data = []
+        sources_by_tier = {'cached_db': 0, 'expert_fact_check': 0, 'web_scrape': 0, 'web_search': 0}
+
+        if source_ids:
+            db_sources = Source.query.filter(Source.sourceID.in_(source_ids)).all()
+            for src in db_sources:
+                citation = Citation.query.filter_by(
+                    claimID=c.claimID, sourceID=src.sourceID
+                ).first()
+                type_val = src.source_type.value if src.source_type else 'news'
+                tier, tier_label = TYPE_TO_TIER.get(type_val, ('web_search', 'Web Search'))
+                sources_data.append({
+                    'url':             src.url,
+                    'title':           src.title,
+                    'quote':           citation.info_used if citation and citation.info_used else '',
+                    'relevance_score': 0.8,
+                    'tier':            tier,
+                    'tier_label':      tier_label,
+                    'publisher':       src.title,
+                    'rating':          '',
+                })
+                sources_by_tier[tier] = sources_by_tier.get(tier, 0) + 1
+
+        verdict_val  = fact_check.verdict.value if fact_check and fact_check.verdict else None
+        category     = STATUS_TO_CATEGORY.get(verdict_val, 'unrated') if verdict_val else 'unrated'
+        score        = fact_check.confidence_score if fact_check and fact_check.confidence_score else 40.0
+        explanation  = fact_check.explanation if fact_check and fact_check.explanation else ''
+
+        claim_data['report'] = {
+            'claim':           c.claim_text,
+            'verdict':         category,
+            'credibility_score': score,
+            'summary':         explanation,
+            'sources':         sources_data,
+            'source_count':    len(sources_data),
+            'sources_by_tier': sources_by_tier,
+            'tiers_searched':  [t for t, cnt in sources_by_tier.items() if cnt > 0],
+            'analysis_notes':  '',
+        }
+=======
             claim_data['verdict'] = fact_check.verdict.value if fact_check.verdict else None
             claim_data['confidence_score'] = fact_check.confidence_score
             claim_data['explanation'] = fact_check.explanation
@@ -166,6 +248,7 @@ def history():
             claim_data['confidence_score'] = None
             claim_data['explanation'] = None
             claim_data['checked_via'] = None
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
         results.append(claim_data)
 

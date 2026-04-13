@@ -277,9 +277,19 @@ def search_tier4_web_search(search_term: str) -> tuple[list[dict], str]:
 
 # ── Orchestrator ──────────────────────────────────────────────────────────────
 
-def run_tiered_search(search_term: str) -> dict:
+ALL_METHODS = {"web-scrape", "cited-database", "expert-driven"}
+
+
+def run_tiered_search(search_term: str, methods: list[str] | None = None) -> dict:
     """
-    Execute the full four-tier pipeline for one search term.
+    Execute the tiered fact-checking pipeline for one search term.
+
+    ``methods`` controls which tiers are active:
+        'cited-database'  →  Tier 1 (cached DB)
+        'expert-driven'   →  Tier 2 (Google Fact Check API)
+        'web-scrape'      →  Tier 3 (primary-document scraping)
+    Tier 4 (Gemini web search) always runs as a last-resort fallback.
+    When ``methods`` is None or empty every tier is enabled.
 
     Returns a dict with:
         all_sources        – combined normalised source list
@@ -288,35 +298,43 @@ def run_tiered_search(search_term: str) -> dict:
         tiers_searched     – list of tier keys that returned data
         sources_by_tier    – count of sources per tier
     """
+    if not methods:
+        methods = list(ALL_METHODS)
+
+    active = set(methods)
+
     all_sources: list[dict] = []
     raw_google_claims: list = []
     gemini_analysis: str = ""
     tiers_searched: list[str] = []
     counts = {"cached_db": 0, "expert_fact_check": 0, "web_scrape": 0, "web_search": 0}
 
-    # Tier 1 – cached database
-    t1 = search_tier1_cached_db(search_term)
-    if t1:
-        all_sources.extend(t1)
-        counts["cached_db"] = len(t1)
-        tiers_searched.append("cached_db")
+    # Tier 1 – cached database (only when 'cited-database' is selected)
+    if "cited-database" in active:
+        t1 = search_tier1_cached_db(search_term)
+        if t1:
+            all_sources.extend(t1)
+            counts["cached_db"] = len(t1)
+            tiers_searched.append("cached_db")
 
-    # Tier 2 – Google Fact Check API
-    raw_google_claims, t2 = search_tier2_google_fact_check(search_term)
-    if t2:
-        all_sources.extend(t2)
-        counts["expert_fact_check"] = len(t2)
-        tiers_searched.append("expert_fact_check")
+    # Tier 2 – Google Fact Check API (only when 'expert-driven' is selected)
+    if "expert-driven" in active:
+        raw_google_claims, t2 = search_tier2_google_fact_check(search_term)
+        if t2:
+            all_sources.extend(t2)
+            counts["expert_fact_check"] = len(t2)
+            tiers_searched.append("expert_fact_check")
 
-    # Tier 3 – primary-document scraping (only when source pool is sparse)
-    if len(all_sources) < 3:
+    # Tier 3 – primary-document scraping (only when 'web-scrape' is selected
+    #           and the source pool is still sparse)
+    if "web-scrape" in active and len(all_sources) < 3:
         t3 = search_tier3_web_scrape(search_term)
         if t3:
             all_sources.extend(t3)
             counts["web_scrape"] = len(t3)
             tiers_searched.append("web_scrape")
 
-    # Tier 4 – general web search (final fallback)
+    # Tier 4 – general web search (always available as a final fallback)
     if len(all_sources) < 2:
         t4, gemini_analysis = search_tier4_web_search(search_term)
         if t4:

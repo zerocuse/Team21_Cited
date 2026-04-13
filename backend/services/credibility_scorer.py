@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """
 Source credibility scoring algorithm.
 
@@ -168,6 +167,3 @@ def compute_confidence(fact_checks: list, verdict: dict) -> float:
 
     score = source_cred * 0.65 + consensus_rate * 0.35
     return round(min(100.0, score), 2)
-=======
-#will hold the class that calculates the credibility scores for each of the facts
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e

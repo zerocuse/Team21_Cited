@@ -66,7 +66,6 @@
  margin-top: '5px';
 }
 
-<<<<<<< HEAD
 .rejection-msg {
   margin-top: 0.5rem;
   padding: 0.6rem 0.9rem;
@@ -78,8 +77,6 @@
   line-height: 1.5;
 }
 
-=======
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 .uploaded-file {
   display: flex;
   align-items: center;
@@ -280,7 +277,6 @@
   }
 }
 
-<<<<<<< HEAD
 /* ─── Structured Report Section ─── */
 
 .report-section {
@@ -488,9 +484,6 @@
   border-color: #475569;
 }
 .source-card.tier-websearch { border-left-color: #475569; }
-
-=======
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
 
 

@@ -1,16 +1,17 @@
 import os
 import json
-<<<<<<< HEAD
 import anthropic
 from models.models import VerificationStatus, CheckedVia
 
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+_ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
+client = anthropic.Anthropic(api_key=_ANTHROPIC_KEY) if _ANTHROPIC_KEY else None
 
 VERDICT_MAP = {
-    "true":          VerificationStatus.TRUE,
-    "false":         VerificationStatus.FALSE,
+    "true":           VerificationStatus.TRUE,
+    "false":          VerificationStatus.FALSE,
     "partially_true": VerificationStatus.PARTIALLY_TRUE,
 }
+
 
 def analyze_claim(claim: str) -> dict | None:
     """
@@ -24,25 +25,6 @@ def analyze_claim(claim: str) -> dict | None:
             "explanation":      str,
             "checked_via":      CheckedVia.LLM,
         }
-=======
-import google.generativeai as genai
-from models.models import VerificationStatus, CheckedVia
-
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.0-flash")
-
-VERDICT_MAP = {
-    "true":           VerificationStatus.TRUE,
-    "false":          VerificationStatus.FALSE,
-    "partially_true": VerificationStatus.PARTIALLY_TRUE,
-}
-
-
-def analyze_claim(claim: str) -> dict | None:
-    """
-    Sends a claim to Gemini and returns a structured verdict dict,
-    or None if the API call fails.
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
     """
     prompt = f"""You are a fact-checking assistant. Analyze the following claim and respond ONLY with a JSON object — no preamble, no markdown.
 
@@ -55,20 +37,16 @@ Respond with exactly this structure:
   "explanation": "<one or two sentence explanation>"
 }}"""
 
+    if client is None:
+        return None  # API key not configured
+
     try:
-<<<<<<< HEAD
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=256,
             messages=[{"role": "user", "content": prompt}]
         )
         raw = message.content[0].text.strip()
-=======
-        response = model.generate_content(prompt)
-        raw = response.text.strip()
-        # Strip markdown fences if present
-        raw = raw.replace("```json", "").replace("```", "").strip()
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
         data = json.loads(raw)
 
         verdict_str = data.get("verdict", "").lower()
@@ -84,9 +62,5 @@ Respond with exactly this structure:
         }
 
     except Exception as e:
-<<<<<<< HEAD
         print(f"[ai_analyzer] Error: {e}")
-=======
-        print(f"[ai_analyzer] Gemini error: {e}")
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
         return None

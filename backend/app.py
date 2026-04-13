@@ -6,11 +6,6 @@ from flask_cors import CORS
 import spacy
 from models import *
 from flask_sqlalchemy import SQLAlchemy
-<<<<<<< HEAD
-
-=======
-from services.claim_comparator import compare_claims, invert_rating_category, invert_condensed_rating
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
 
 
@@ -137,11 +132,7 @@ def classify_rating(condensed):
         return "mixed"
     if words & TRUE_WORDS:
         return "true"
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
     c = condensed.lower()
     if any(w in c for w in FALSE_WORDS):
         return "false"
@@ -156,47 +147,29 @@ def classify_rating(condensed):
 def build_verdict(fact_checks):
     if not fact_checks:
         return None
-<<<<<<< HEAD
-#Ratings
-    condensed_map = {}
-=======
 
-    category_counts = {}
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
+    condensed_map = {}
     total = 0
 
     for claim in fact_checks:
         for review in claim.get("claimReview", []):
-<<<<<<< HEAD
             original = review.get("textualRating", "")
             condensed = condense_rating(original)
             condensed_map[condensed] = condensed_map.get(condensed, 0) + 1
-=======
-            # Use already-enriched and inverted category if available
-            category = review.get("ratingCategory")
-            if not category:
-                original = review.get("textualRating", "")
-                condensed = condense_rating(original)
-                category = classify_rating(condensed)
-            category_counts[category] = category_counts.get(category, 0) + 1
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
             total += 1
 
     if total == 0:
         return None
 
-<<<<<<< HEAD
-    # frequent rating wins
     sorted_ratings = sorted(condensed_map.items(), key=lambda x: x[1], reverse=True)
     top_rating = sorted_ratings[0][0]
     category = classify_rating(top_rating)
 
-    #Summary
     source_word = "source" if total == 1 else "sources"
     summaries = {
-        "true": f"Rated '{top_rating}' by {total} {source_word}. Claim appears credible.",
-        "false": f"Rated '{top_rating}' by {total} {source_word}. Claim appears unfounded.",
-        "mixed": f"Rated '{top_rating}' by {total} {source_word}. Claim has mixed support.",
+        "true":    f"Rated '{top_rating}' by {total} {source_word}. Claim appears credible.",
+        "false":   f"Rated '{top_rating}' by {total} {source_word}. Claim appears unfounded.",
+        "mixed":   f"Rated '{top_rating}' by {total} {source_word}. Claim has mixed support.",
         "unrated": f"Rated '{top_rating}' by {total} {source_word}. Verdict unclear.",
     }
 
@@ -206,25 +179,6 @@ def build_verdict(fact_checks):
         "totalReviews": total,
         "breakdown": condensed_map,
         "summary": summaries.get(category, summaries["unrated"]),
-=======
-    sorted_categories = sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
-    top_category = sorted_categories[0][0]
-
-    source_word = "source" if total == 1 else "sources"
-    summaries = {
-        "true":    f"Rated 'true' by {total} {source_word}. Claim appears credible.",
-        "false":   f"Rated 'false' by {total} {source_word}. Claim appears unfounded.",
-        "mixed":   f"Rated 'mixed' by {total} {source_word}. Claim has mixed support.",
-        "unrated": f"Rated 'unrated' by {total} {source_word}. Verdict unclear.",
-    }
-
-    return {
-        "topRating":    top_category,
-        "category":     top_category,
-        "totalReviews": total,
-        "breakdown":    category_counts,
-        "summary":      summaries.get(top_category, summaries["unrated"]),
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
     }
 
 
@@ -246,7 +200,6 @@ def is_relevant_claim(sent):
     # Must have a subject and a main verb
     has_subject = any(token.dep_ in ("nsubj", "nsubjpass") for token in sent)
     has_verb = any(token.pos_ == "VERB" for token in sent)
-<<<<<<< HEAD
 
     # Exclude very short fragments and questions (which aren't usually 'claims')
     is_not_short = len(sent) > 4
@@ -431,49 +384,40 @@ def _save_source_to_db(claim_id: int, url: str, title: str, info: str, source_ty
         print(f"[DB] _save_source_to_db error: {e}")
 
 
-=======
-    
-    # Exclude very short fragments and questions (which aren't usually 'claims')
-    is_not_short = len(sent) > 4
-    is_not_question = not sent.text.strip().endswith('?')
-    
-    # Look for Entities (Dates, People, Orgs) - these are high-value claims
-    has_entities = len(sent.ents) > 0
-    
-    return (has_subject and has_verb and is_not_short and is_not_question) or has_entities
-
-
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 @app.route('/fact-check', methods=['POST'])
 def handle_fact_check():
+    import json as _json
     query = request.form.get('query')
     if not query:
         return jsonify({"status": "error", "message": "No query"}), 400
 
-<<<<<<< HEAD
     from routes.auth import _decode_token
     from services.claim_service import create_claim
-    from services.tiered_search import run_tiered_search
-=======
-    # Try to identify the logged-in user from the token
-    from routes.auth import _decode_token
-    from services.claim_service import create_claim
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
+    from services.tiered_search import run_tiered_search, ALL_METHODS
 
     auth_header = request.headers.get('Authorization', '')
     token = auth_header.removeprefix('Bearer ').strip()
     user_id = _decode_token(token) if token else None
 
     query = " ".join(query.split())
-<<<<<<< HEAD
+
+    # ── Parse selected fact-check methods ───────────────────────────────────
+    try:
+        raw_methods = request.form.get('fact_check_methods', '[]')
+        selected_methods = _json.loads(raw_methods)
+        if not isinstance(selected_methods, list) or not selected_methods:
+            selected_methods = list(ALL_METHODS)
+    except Exception:
+        selected_methods = list(ALL_METHODS)
+
+    # Only cache to the Cited database when all 3 methods are used
+    cache_to_db = set(selected_methods) >= ALL_METHODS
 
     # ── Scorability gate — reject before any processing or DB write ────────
     scorable, rejection_reason = is_scorable_claim(query)
     if not scorable:
         return jsonify({"status": "unscoreable", "message": rejection_reason}), 422
 
-=======
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
     doc = nlp(query)
     relevant_sentences = [sent.text.strip() for sent in doc.sents if is_relevant_claim(sent)]
     if not relevant_sentences:
@@ -482,10 +426,9 @@ def handle_fact_check():
     all_results = []
 
     for search_term in relevant_sentences[:4]:
-<<<<<<< HEAD
         try:
             # ── Tiered source discovery ──────────────────────────────────────
-            tiered = run_tiered_search(search_term)
+            tiered = run_tiered_search(search_term, methods=selected_methods)
             raw_google_claims = tiered["raw_google_claims"]
             all_sources       = tiered["all_sources"]
             gemini_analysis   = tiered.get("gemini_analysis", "")
@@ -507,103 +450,42 @@ def handle_fact_check():
                 "report":         report,
             })
 
-=======
-        params = {
-            "query": search_term,
-            "key": GOOGLE_API_KEY,
-            "languageCode": "en"
-        }
-
-        try:
-            response = requests.get(GOOGLE_URL, params=params)
-            data = response.json()
-            google_claims = data.get('claims', [])
-            print(f"DEBUG: search_term='{search_term}', API key present={bool(GOOGLE_API_KEY)}, status={response.status_code}, claims_count={len(google_claims)}")
-
-
-            if google_claims:
-                
-                # ── Compare & filter/invert ratings ──
-                for claim in google_claims[:]:  # iterate over a COPY
-                    matched_text = claim.get("text", "")
-                    if not matched_text:
-                        continue
-
-                    relationship = compare_claims(search_term, matched_text)
-
-                    if relationship == "UNRELATED":
-                        google_claims.remove(claim)
-                    elif relationship == "OPPOSITE":
-                        for review in claim.get("claimReview", []):
-                            review["_inverted"] = True
-
-                # Now enrich (condense + classify) as before
-                enriched_claims = enrich_reviews(google_claims)
-
-                # ── NEW: Apply inversion to enriched ratings ──
-                for claim in enriched_claims:
-                    for review in claim.get("claimReview", []):
-                        if review.get("_inverted"):
-                            review["condensedRating"] = invert_condensed_rating(
-                                review["condensedRating"]
-                            )
-                            review["ratingCategory"] = invert_rating_category(
-                                review["ratingCategory"]
-                            )
-
-                verdict = build_verdict(enriched_claims)
-                all_results.append({
-                    "original_claim": search_term,
-                    "fact_checks": enriched_claims,
-                    "verdict": verdict
-                })
-            else:
-                all_results.append({
-                    "original_claim": search_term,
-                    "fact_checks": [],
-                    "verdict": None
-                })
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
         except Exception as e:
             print(f"Error checking sentence: {e}")
             all_results.append({
                 "original_claim": search_term,
-<<<<<<< HEAD
                 "fact_checks":    [],
                 "verdict":        None,
                 "report":         None,
                 "error":          str(e),
             })
 
-    # ── Persist to DB if user is logged in ───────────────────────────────────
-=======
-                "fact_checks": [],
-                "verdict": None,
-                "error": str(e)
-            })
-
-    # Save to DB if user is logged in
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
+    # ── Persist to DB only when all methods used and verdict is conclusive ───
     from models.models import Source, Citation, ClaimSourceLink, SourceType
-    if user_id:
+    if user_id and cache_to_db:
         try:
             from services.fact_check_services import create_fact_check
             from services.ai_analyzer import analyze_claim
-<<<<<<< HEAD
             from services.credibility_scorer import compute_confidence
 
-            claim_record = create_claim(query, user_id)
-=======
-
-            claim = create_claim(query, user_id)
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
-
             has_google_verdict = any(r.get("verdict") for r in all_results)
+            ai_result = None
+
+            if not has_google_verdict:
+                # Fallback to LLM when no structured verdict exists
+                ai_result = analyze_claim(query)
+
+            # Only persist when we have a conclusive verdict
+            is_conclusive = has_google_verdict or (ai_result is not None)
+            if not is_conclusive:
+                # Inconclusive — skip DB write entirely
+                return jsonify(all_results), 200
+
+            claim_record = create_claim(query, user_id)
 
             if has_google_verdict:
                 for result in all_results:
                     if result.get("verdict"):
-<<<<<<< HEAD
                         score = compute_confidence(
                             result.get("fact_checks", []),
                             result["verdict"],
@@ -613,30 +495,18 @@ def handle_fact_check():
                             claim_record.status = fc.verdict
                             db.session.commit()
             else:
-                # Fallback to LLM when no structured verdict exists
-=======
-                        create_fact_check(claim.claimID, user_id, result["verdict"])
-            else:
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
-                ai_result = analyze_claim(query)
-                if ai_result:
-                    from models.models import FactCheck
-                    record = FactCheck(
-<<<<<<< HEAD
-                        claimID=claim_record.claimID,
-=======
-                        claimID=claim.claimID,
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
-                        userID=user_id,
-                        verdict=ai_result["verdict"],
-                        confidence_score=ai_result["confidence_score"],
-                        explanation=ai_result["explanation"],
-                        checked_via=ai_result["checked_via"],
-                    )
-                    db.session.add(record)
-<<<<<<< HEAD
-                    claim_record.status = ai_result["verdict"]
-                    db.session.commit()
+                from models.models import FactCheck
+                record = FactCheck(
+                    claimID=claim_record.claimID,
+                    userID=user_id,
+                    verdict=ai_result["verdict"],
+                    confidence_score=ai_result["confidence_score"],
+                    explanation=ai_result["explanation"],
+                    checked_via=ai_result["checked_via"],
+                )
+                db.session.add(record)
+                claim_record.status = ai_result["verdict"]
+                db.session.commit()
 
             # Save all sources (Tier 2 Google + Tier 3/4)
             TIER_TYPE_MAP = {
@@ -672,73 +542,59 @@ def handle_fact_check():
                         src.get("quote", ""),
                         TIER_TYPE_MAP.get(tier, SourceType.OTHER),
                     )
-=======
-
-            # Save sources from Google results
-            print(f"DEBUG: Saving sources for {len(all_results)} results")
-            for result in all_results:
-                for fact_check_item in result.get("fact_checks", []):
-                    for review in fact_check_item.get("claimReview", []):
-                        publisher_name = review.get("publisher", {}).get("name", "Unknown")
-                        review_url = review.get("url", "")
-                        rating_text = review.get("textualRating", "")
-
-                        if not review_url:
-                            continue
-
-                        # Reuse existing source if URL already exists
-                        existing_source = Source.query.filter_by(url=review_url).first()
-                        if existing_source:
-                            source = existing_source
-                        else:
-                            source = Source(
-                                url=review_url,
-                                title=publisher_name,
-                                source_type=SourceType.NEWS,
-                            )
-                            db.session.add(source)
-                            db.session.flush()  # get sourceID before linking
-
-                        # Link source to claim (skip if already linked)
-                        existing_link = ClaimSourceLink.query.filter_by(
-                            claimID=claim.claimID,
-                            sourceID=source.sourceID
-                        ).first()
-                        if not existing_link:
-                            link = ClaimSourceLink(
-                                claimID=claim.claimID,
-                                sourceID=source.sourceID
-                            )
-                            db.session.add(link)
-
-                        # Create citation with the rating text
-                        citation = Citation(
-                            claimID=claim.claimID,
-                            sourceID=source.sourceID,
-                            info_used=rating_text
-                        )
-                        db.session.add(citation)
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
             db.session.commit()
 
         except Exception as e:
             print(f"Failed to save claim/fact_check: {e}")
 
-<<<<<<< HEAD
     return jsonify(all_results), 200
-=======
-    return jsonify({"status": "success", "results": all_results})
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
+
+
+@app.cli.command("cleanup-inconclusive")
+def cleanup_inconclusive():
+    """Remove inconclusive (no-verdict) claim records from the database."""
+    from models.models import Claim, FactCheck, Citation, ClaimSourceLink
+    with app.app_context():
+        _run_inconclusive_cleanup()
+
+
+def _run_inconclusive_cleanup():
+    """Delete all Claim records with status=None and their dependent rows."""
+    from models.models import Claim, FactCheck, Citation, ClaimSourceLink
+    try:
+        inconclusive_ids = [
+            r.claimID for r in Claim.query.filter_by(status=None).all()
+        ]
+        if not inconclusive_ids:
+            print("[cleanup] No inconclusive records found.")
+            return
+
+        ClaimSourceLink.query.filter(
+            ClaimSourceLink.claimID.in_(inconclusive_ids)
+        ).delete(synchronize_session=False)
+
+        Citation.query.filter(
+            Citation.claimID.in_(inconclusive_ids)
+        ).delete(synchronize_session=False)
+
+        FactCheck.query.filter(
+            FactCheck.claimID.in_(inconclusive_ids)
+        ).delete(synchronize_session=False)
+
+        deleted = Claim.query.filter(
+            Claim.claimID.in_(inconclusive_ids)
+        ).delete(synchronize_session=False)
+
+        db.session.commit()
+        print(f"[cleanup] Removed {deleted} inconclusive claim record(s).")
+    except Exception as e:
+        db.session.rollback()
+        print(f"[cleanup] Error during inconclusive cleanup: {e}")
 
 
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-        #from services.seed_admins import seed_admins
-        #seed_admins()
+        _run_inconclusive_cleanup()
     app.run(debug=True, port=5001)
-<<<<<<< HEAD
-=======
-
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e

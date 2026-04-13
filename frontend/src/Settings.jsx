@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import './Settings.css'
 
 const DEFAULTS = {
-  factCheckMethod: 'web-scrape',
+  factCheckMethods: ['web-scrape', 'cited-database', 'expert-driven'],
   resultsPerClaim: 5,
   minWordCount: 3,
   showBreakdown: true,
@@ -13,7 +13,13 @@ const DEFAULTS = {
 
 function loadSettings() {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem('cited_settings') || '{}') }
+    const saved = JSON.parse(localStorage.getItem('cited_settings') || '{}')
+    // Migrate legacy single-select factCheckMethod to array
+    if (typeof saved.factCheckMethod === 'string' && !saved.factCheckMethods) {
+      saved.factCheckMethods = [saved.factCheckMethod]
+      delete saved.factCheckMethod
+    }
+    return { ...DEFAULTS, ...saved }
   } catch {
     return { ...DEFAULTS }
   }
@@ -43,11 +49,23 @@ function Settings() {
     })
   }
 
+  function toggleMethod(id) {
+    const current = settings.factCheckMethods || []
+    const next = current.includes(id)
+      ? current.filter(m => m !== id)
+      : [...current, id]
+    if (next.length === 0) return   // keep at least one selected
+    update('factCheckMethods', next)
+  }
+
   const METHOD_OPTIONS = [
     { id: 'web-scrape',      label: 'Web Scrape',     desc: 'Search the live web for fact-checks' },
     { id: 'cited-database',  label: 'Cited Database', desc: 'Query our curated fact-check database' },
-    { id: 'expert-driven',   label: 'Expert-Driven',  desc: 'Route to human expert reviewers' },
+    { id: 'expert-driven',   label: 'Expert-Driven',  desc: 'Route to expert fact-check reviewers' },
   ]
+
+  const selectedMethods = settings.factCheckMethods || []
+  const allSelected = selectedMethods.length === METHOD_OPTIONS.length
 
   return (
     <div className="settings-container">
@@ -61,14 +79,14 @@ function Settings() {
 
           {/* Fact-check Method */}
           <div className="settings-item">
-            <div className="settings-item-label">Fact-check Method</div>
-            <div className="settings-item-desc">Choose how Cited sources and verifies claims</div>
+            <div className="settings-item-label">Fact-check Methods</div>
+            <div className="settings-item-desc">Choose which methods Cited uses to verify claims (select all 3 to enable result caching)</div>
             <div className="settings-method-group">
               {METHOD_OPTIONS.map(opt => (
                 <button
                   key={opt.id}
-                  className={`method-btn${settings.factCheckMethod === opt.id ? ' method-btn--active' : ''}`}
-                  onClick={() => update('factCheckMethod', opt.id)}
+                  className={`method-btn${selectedMethods.includes(opt.id) ? ' method-btn--active' : ''}`}
+                  onClick={() => toggleMethod(opt.id)}
                   title={opt.desc}
                 >
                   {opt.label}
@@ -76,7 +94,9 @@ function Settings() {
               ))}
             </div>
             <div className="settings-method-desc">
-              {METHOD_OPTIONS.find(o => o.id === settings.factCheckMethod)?.desc}
+              {allSelected
+                ? 'All methods active — results will be saved to the Cited database.'
+                : `${selectedMethods.length} of 3 method${selectedMethods.length === 1 ? '' : 's'} selected — results will not be cached (enable all 3 to save).`}
             </div>
           </div>
 

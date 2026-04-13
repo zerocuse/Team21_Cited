@@ -1,17 +1,16 @@
 """
 Hybrid claim comparator for TM21-148.
-Determines whether a user's claim and a matched fact-check claim
-are saying the SAME thing, the OPPOSITE, or are UNRELATED.
-
-Layer 1 — Root verb match + negation check  (precise, fast)
-Layer 2 — Subject matching + negation check  (catches everything else)
-
-No LLM needed — runs entirely on spaCy.
+Layer 1 — Root verb match + negation check
+Layer 2 — Subject matching + negation check
+Layer 3 — Groq LLM fallback
 """
 
+import os
 import spacy
+from groq import Groq
 
 nlp = spacy.load("en_core_web_sm")
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 NEGATION_WORDS = {
     "not", "never", "no", "neither", "nor", "n't", "cannot",
@@ -21,12 +20,7 @@ NEGATION_WORDS = {
 }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Helpers
-# ═══════════════════════════════════════════════════════════════════════════
-
 def _has_negation(doc) -> bool:
-    """Check whether a spaCy Doc contains negation."""
     for token in doc:
         if token.dep_ == "neg":
             return True
@@ -36,7 +30,6 @@ def _has_negation(doc) -> bool:
 
 
 def _extract_root_verb(doc):
-    """Return the root verb token, or None."""
     for token in doc:
         if token.dep_ == "ROOT" and token.pos_ in ("VERB", "AUX"):
             return token
@@ -44,16 +37,10 @@ def _extract_root_verb(doc):
 
 
 def _get_subject_words(doc) -> set:
-    """
-    Extract the grammatical subject's core words (head + compounds only).
-    Does NOT follow the full subtree — avoids picking up names from
-    prepositional phrases like "Assassination of Charlie Kirk".
-    """
     for token in doc:
         if token.dep_ in ("nsubj", "nsubjpass"):
             words = set()
             words.add(token.text.lower())
-            # Only direct compound children, not full subtree
             for child in token.children:
                 if child.dep_ in ("compound", "flat", "flat:name"):
                     words.add(child.text.lower())
@@ -61,21 +48,12 @@ def _get_subject_words(doc) -> set:
     return set()
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Layer 1 — Root verb negation (when verbs match)
-# ═══════════════════════════════════════════════════════════════════════════
-
 def _verb_compare(user_doc, matched_doc) -> str:
-    """
-    Compare by root verb + negation.
-    Only works when both share the same root verb lemma.
-    """
     user_root = _extract_root_verb(user_doc)
     matched_root = _extract_root_verb(matched_doc)
 
     if user_root is None or matched_root is None:
         return "INCONCLUSIVE"
-
     if user_root.lemma_ != matched_root.lemma_:
         return "INCONCLUSIVE"
 
@@ -87,68 +65,69 @@ def _verb_compare(user_doc, matched_doc) -> str:
     return "OPPOSITE"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Layer 2 — Subject matching (handles different sentence structures)
-# ═══════════════════════════════════════════════════════════════════════════
-
 def _subject_compare(user_doc, matched_doc) -> str:
-    """
-    If the matched claim's grammatical subject is different from the user's,
-    the claim is about something else → UNRELATED.
-
-    e.g. User: "Charlie Kirk was killed"  (subject: Charlie Kirk)
-         Match: "An image shows Renee Good..."  (subject: image)  → UNRELATED
-         Match: "Mick Jagger posted about..."  (subject: Mick Jagger)  → UNRELATED
-         Match: "Charlie Kirk isn't dead"  (subject: Charlie Kirk)  → check negation
-    """
     user_subj = _get_subject_words(user_doc)
     matched_subj = _get_subject_words(matched_doc)
 
-    # If we can't extract subjects from either, be conservative
     if not user_subj or not matched_subj:
-        return "SAME"
+        return "INCONCLUSIVE"
 
-    # Check if subjects share any words
-    # e.g. {"charlie", "kirk"} & {"charlie", "kirk"} → match
-    # e.g. {"charlie", "kirk"} & {"image"} → no match
+    # Different subjects → definitely unrelated
     if not (user_subj & matched_subj):
         return "UNRELATED"
 
-    # Same subject — check negation
+    # Same subject with clear negation mismatch → opposite
     user_negated = _has_negation(user_doc)
     matched_negated = _has_negation(matched_doc)
 
     if user_negated != matched_negated:
         return "OPPOSITE"
 
-    return "SAME"
+    # Same subject, no negation difference — let LLM verify
+    # because antonyms (alive/dead, true/false) aren't caught by negation
+    return "INCONCLUSIVE"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Public API
-# ═══════════════════════════════════════════════════════════════════════════
+def _llm_compare(user_claim: str, matched_claim: str) -> str:
+    prompt = f"""You are a fact-check assistant. Compare these two claims and determine their relationship.
+
+Claim A (user submitted): "{user_claim}"
+Claim B (from fact-check database): "{matched_claim}"
+
+Do these two claims make the same assertion, opposite assertions, or are they about unrelated topics?
+
+Respond with ONLY one word: SAME, OPPOSITE, or UNRELATED"""
+
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=10,
+        )
+        result = response.choices[0].message.content.strip().upper()
+
+        if result in ("SAME", "OPPOSITE", "UNRELATED"):
+            return result
+        return "SAME"
+
+    except Exception as e:
+        print(f"[claim_comparator] Groq error: {e}")
+        return "SAME"
+
 
 def compare_claims(user_claim: str, matched_claim: str) -> str:
-    """
-    Determine the relationship between a user's claim and a fact-check match.
-
-    1. If both claims share the same root verb → compare negation.
-    2. Otherwise → compare grammatical subjects.
-       - Different subject → UNRELATED
-       - Same subject → check negation → SAME or OPPOSITE
-
-    Returns: "SAME", "OPPOSITE", or "UNRELATED"
-    """
     user_doc = nlp(user_claim)
     matched_doc = nlp(matched_claim)
 
-    # Layer 1: root verb match
     result = _verb_compare(user_doc, matched_doc)
     if result != "INCONCLUSIVE":
         return result
 
-    # Layer 2: subject matching
-    return _subject_compare(user_doc, matched_doc)
+    result = _subject_compare(user_doc, matched_doc)
+    if result != "INCONCLUSIVE":
+        return result
+
+    return _llm_compare(user_claim, matched_claim)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -168,7 +147,6 @@ _INVERSION_MAP = {
 
 
 def invert_rating_category(category: str) -> str:
-    """Flip "true" <-> "false". Mixed/unrated stay the same."""
     if category == "true":
         return "false"
     elif category == "false":
@@ -177,7 +155,6 @@ def invert_rating_category(category: str) -> str:
 
 
 def invert_condensed_rating(condensed: str) -> str:
-    """Flip a condensed rating string if a mapping exists."""
     lower = condensed.lower()
     if lower in _INVERSION_MAP:
         return _INVERSION_MAP[lower]

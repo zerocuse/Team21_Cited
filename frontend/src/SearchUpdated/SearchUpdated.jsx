@@ -251,7 +251,10 @@ function SearchUpdated() {
 											{claim.claimReview.map((review, j) => (
 												<div key={j} className="verdict-row">
 													<span className={`rating-badge ${review.ratingCategory || "unrated"}`}>
-														{review.condensedRating || review.textualRating}
+														{review._inverted 
+															? (review.ratingCategory === "true" ? "Supports Claim" : "Contradicts Claim")
+															: (review.condensedRating || review.textualRating)
+														}
 													</span>
 													<span className="original-rating">({review.textualRating})</span>
 													<span className="publisher-name">by {review.publisher.name}</span>
@@ -269,9 +272,62 @@ function SearchUpdated() {
 										</div>
 									))}
 								</>
+							) : verdict ? (
+								<div className={`verdict-summary verdict-${verdict.category}`}>
+									<div className="verdict-headline">
+										<span className="verdict-icon">{verdictIcon(verdict.category)}</span>
+										<p className="verdict-text">{verdict.summary}</p>
+									</div>
+									{verdict.confidence_score && (
+										<div style={{
+											display: 'flex',
+											alignItems: 'center',
+											gap: '0.5rem',
+											marginTop: '0.75rem',
+										}}>
+											<div style={{
+												flex: 1,
+												height: '6px',
+												background: '#e5e7eb',
+												borderRadius: '3px',
+												overflow: 'hidden',
+											}}>
+												<div style={{
+													width: `${verdict.confidence_score}%`,
+													height: '100%',
+													background: verdict.confidence_score > 70 ? '#22c55e' : verdict.confidence_score > 40 ? '#f59e0b' : '#ef4444',
+													borderRadius: '3px',
+												}} />
+											</div>
+											<span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+												{verdict.confidence_score}% confidence
+											</span>
+										</div>
+									)}
+									{verdict.sources && verdict.sources.length > 0 && (
+										<div style={{ marginTop: '0.75rem' }}>
+											<small style={{ color: '#9ca3af', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>Sources:</small>
+											<ul style={{ listStyle: 'none', padding: 0, margin: '0.35rem 0 0' }}>
+												{verdict.sources.map((src, i) => (
+													<li key={i} style={{ fontSize: '0.85rem', marginBottom: '0.3rem' }}>
+														<a href={src.url} target="_blank" rel="noreferrer" style={{ color: '#6366f1', textDecoration: 'none' }}>
+															{src.title}
+														</a>
+														<span style={{ color: '#9ca3af', fontSize: '0.78rem' }}> — {src.publisher}</span>
+													</li>
+												))}
+											</ul>
+										</div>
+									)}
+									{verdict.ai_generated && (
+										<p style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: '0.5rem', fontStyle: 'italic' }}>
+											AI-generated analysis — no professional fact-checks were found for this claim
+										</p>
+									)}
+								</div>
 							) : (
-								<p className="no-results">No professional fact-checks found for this claim.</p>
-							)}
+                            <p className="no-results">No professional fact-checks found for this claim.</p>
+                        )}
 						</div>
 					);
 				})}

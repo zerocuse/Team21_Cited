@@ -1,4 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
+<<<<<<< HEAD
+import { useLocation } from 'react-router-dom'
+import { ReportSection, verdictIcon } from './shared/FactReport'
+=======
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 import './Account.css'
 
 const API = 'http://127.0.0.1:5001/auth'
@@ -6,6 +11,10 @@ const API = 'http://127.0.0.1:5001/auth'
 const BADGE_LABEL = { free: 'Free', premium: 'Premium', admin: 'Admin' }
 
 function Account() {
+<<<<<<< HEAD
+  const location     = useLocation()
+=======
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
   const loginRef     = useRef()
   const fileInputRef = useRef()
   const [isLogin, setIsLogin]         = useState(true)
@@ -15,7 +24,29 @@ function Account() {
   const [avatarError, setAvatarError] = useState(false)
   const [authReady, setAuthReady]     = useState(false)
   const [history, setHistory]         = useState([])
+<<<<<<< HEAD
+  const [expandedIds, setExpandedIds] = useState(new Set())
 
+  const toggleExpand = (id) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const fetchHistory = (token) => {
+    fetch(API + '/history', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setHistory(data))
+      .catch(() => {})
+  }
+
+  // Re-runs on every navigation to /account so history stays fresh
+=======
+
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) { setAuthReady(true); return }
@@ -23,6 +54,13 @@ function Account() {
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
         setUser(data)
+<<<<<<< HEAD
+        fetchHistory(token)
+      })
+      .catch(() => localStorage.removeItem('token'))
+      .finally(() => setAuthReady(true))
+  }, [location.pathname])
+=======
         fetch(API + '/history', { headers: { 'Authorization': `Bearer ${token}` } })
           .then(res => res.ok ? res.json() : [])
           .then(data => setHistory(data))
@@ -31,6 +69,7 @@ function Account() {
       .catch(() => localStorage.removeItem('token'))
       .finally(() => setAuthReady(true))
   }, [])
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
   const [form, setForm] = useState({
     email: '', password: '', first_name: '', last_name: '', username: ''
@@ -71,6 +110,10 @@ function Account() {
       } else {
         localStorage.setItem('token', data.token)
         setUser(data.user)
+<<<<<<< HEAD
+        fetchHistory(data.token)
+=======
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
         loginRef.current.close()
       }
     } catch {
@@ -172,9 +215,18 @@ function Account() {
           <div className="account-header-container">
             <h1 className="account-header">Account</h1>
             <button className="login-button" onClick={handleLogout}>Log Out</button>
+<<<<<<< HEAD
             {user.membership_status === 'admin' && (
   <a href="/admin" style={{ marginLeft: '1rem' }}>Admin Panel</a>
 )}
+=======
+<<<<<<< HEAD
+=======
+            {user.membership_status === 'admin' && (
+  <a href="/admin" style={{ marginLeft: '1rem' }}>Admin Panel</a>
+)}
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
+>>>>>>> b4b76d097530c8680643f04192318097d3066a74
           </div>
 
           <div className="profile-card">
@@ -225,6 +277,73 @@ function Account() {
 
           <div className="history-section">
             <h3 className="history-header">History</h3>
+<<<<<<< HEAD
+            <div className="history-list">
+              {history.length === 0
+                ? <p style={{ color: '#aaa', fontSize: '0.9rem' }}>No queries yet.</p>
+                : history.map(item => {
+                  const isOpen      = expandedIds.has(item.id)
+                  const statusKey   = item.status === 'partially true' ? 'mixed' : (item.status || 'unrated')
+                  const scoreColor  = item.status === 'true' ? 'green' : item.status === 'false' ? 'red' : item.status ? 'yellow' : 'gray'
+                  const report      = item.report
+                  const hasDetails  = report && (report.sources?.length > 0 || report.summary)
+
+                  return (
+                    <div key={item.id} className={`history-item ${isOpen ? 'history-item--open' : ''}`}>
+                      {/* ── Summary row ── */}
+                      <div
+                        className="history-item-summary"
+                        onClick={() => hasDetails && toggleExpand(item.id)}
+                        style={{ cursor: hasDetails ? 'pointer' : 'default' }}
+                      >
+                        <div className="history-item-left">
+                          <span className="history-verdict-icon">
+                            {verdictIcon(report?.verdict || statusKey)}
+                          </span>
+                          <span className="history-claim-text">
+                            {item.claim_text.length > 120
+                              ? item.claim_text.slice(0, 120) + '…'
+                              : item.claim_text}
+                          </span>
+                        </div>
+                        <div className="history-item-right">
+                          <span className={`verdict-badge verdict-badge--${statusKey}`}>
+                            {item.status || 'No info'}
+                          </span>
+                          {item.confidence_score != null && (
+                            <span className={`score-badge score-badge--${scoreColor}`}>
+                              {Math.round(item.confidence_score)}%
+                            </span>
+                          )}
+                          {item.queried_at && (
+                            <span className="history-date">{item.queried_at}</span>
+                          )}
+                          {hasDetails && (
+                            <span className={`history-expand-icon ${isOpen ? 'open' : ''}`}>
+                              ›
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ── Expanded detail ── */}
+                      {isOpen && report && (
+                        <div className="history-item-detail">
+                          {report.summary && (
+                            <div className={`verdict-summary verdict-${report.verdict || 'unrated'}`}>
+                              <div className="verdict-headline">
+                                <span className="verdict-icon">{verdictIcon(report.verdict)}</span>
+                                <p className="verdict-text">{report.summary}</p>
+                              </div>
+                            </div>
+                          )}
+                          <ReportSection report={report} showLinks={true} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
+=======
             <div className="history-container">
               {history.length === 0
                 ? <p style={{ color: '#aaa', fontSize: '0.9rem' }}>No queries yet.</p>
@@ -259,6 +378,7 @@ function Account() {
                     )}
                   </div>
                 ))
+>>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
               }
             </div>
           </div>

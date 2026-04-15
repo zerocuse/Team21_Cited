@@ -1,12 +1,18 @@
 from models import Claim, db
 
-def create_claim(claim_text: str, userID: int) -> Claim:
+def create_claim(claim_text: str, user_id: int):
+    existing = Claim.query.filter_by(claim_text=claim_text, userID=user_id).first()
+    if existing:
+        existing.view_count = (existing.view_count or 0) + 1
+        db.session.commit()
+        return existing
+    
     if not claim_text or not claim_text.strip():
         raise ValueError("Claim text cannot be null or empty")
     
     new_claim = Claim(
         claim_text=claim_text,
-        userID=userID
+        userID=user_id
     )
     
     db.session.add(new_claim)

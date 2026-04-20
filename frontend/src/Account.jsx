@@ -194,7 +194,6 @@ function Account() {
             {user.membership_status === 'admin' && (
   <a href="/admin" style={{ marginLeft: '1rem' }}>Admin Panel</a>
 )}
->>>>>>> b4b76d097530c8680643f04192318097d3066a74
           </div>
 
           <div className="profile-card">

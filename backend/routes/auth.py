@@ -60,7 +60,7 @@ def register():
     if user.to_dict().get('membership_status') == 'admin':
         response['is_admin'] = True
     return jsonify(response), 200
->>>>>>> b4b76d097530c8680643f04192318097d3066a74
+
 
 
 @auth_bp.route('/login', methods=['POST'])

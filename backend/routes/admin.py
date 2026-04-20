@@ -1,12 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 from models.admin import Admin
-<<<<<<< HEAD
 from models.models import User
-=======
-<<<<<<< HEAD
-=======
-from models.models import User
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 >>>>>>> b4b76d097530c8680643f04192318097d3066a74
 
 admin_bp = Blueprint('admin', __name__)
@@ -23,14 +17,6 @@ def get_admin():
 def get_all_users():
     if not session.get('is_admin'):
         return jsonify({"error": "Unauthorized"}), 403
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-    admin = get_admin()
-    users = admin.get_all_users()
-    return jsonify(users), 200
-=======
->>>>>>> b4b76d097530c8680643f04192318097d3066a74
 
     try:
         users = User.query.with_entities(
@@ -54,9 +40,6 @@ def get_all_users():
 
     except Exception as e:
         return jsonify({"error": "Failed to retrieve users"}), 500
-<<<<<<< HEAD
-=======
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 >>>>>>> b4b76d097530c8680643f04192318097d3066a74
 
 @admin_bp.route('/api/admin/ban/<user_id>', methods=['POST'])

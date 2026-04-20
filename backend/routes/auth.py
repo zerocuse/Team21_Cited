@@ -4,11 +4,7 @@ from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-<<<<<<< HEAD
 from models.models import User, Claim, FactCheck, Source, Citation, ClaimSourceLink, db
-=======
-from models.models import User, Claim, FactCheck, db
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
@@ -59,21 +55,11 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-    token = _make_token(new_user.userID)
-    return jsonify({'token': token, 'user': new_user.to_dict()}), 201
-=======
->>>>>>> b4b76d097530c8680643f04192318097d3066a74
     token = _make_token(user.userID)
     response = {'token': token, 'user': user.to_dict()}
     if user.to_dict().get('membership_status') == 'admin':
         response['is_admin'] = True
     return jsonify(response), 200
-<<<<<<< HEAD
-=======
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 >>>>>>> b4b76d097530c8680643f04192318097d3066a74
 
 
@@ -160,7 +146,6 @@ def history():
         .all()
     )
 
-<<<<<<< HEAD
     # Maps SourceType value → (tier key, tier label)
     TYPE_TO_TIER = {
         'news':         ('expert_fact_check', 'Expert Fact Check'),
@@ -176,8 +161,6 @@ def history():
         'partially true': 'mixed',
     }
 
-=======
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
     results = []
     for c in claims:
         claim_data = c.to_dict()
@@ -190,7 +173,6 @@ def history():
         )
 
         if fact_check:
-<<<<<<< HEAD
             claim_data['verdict']          = fact_check.verdict.value if fact_check.verdict else None
             claim_data['confidence_score'] = fact_check.confidence_score
             claim_data['explanation']      = fact_check.explanation
@@ -244,17 +226,6 @@ def history():
             'tiers_searched':  [t for t, cnt in sources_by_tier.items() if cnt > 0],
             'analysis_notes':  '',
         }
-=======
-            claim_data['verdict'] = fact_check.verdict.value if fact_check.verdict else None
-            claim_data['confidence_score'] = fact_check.confidence_score
-            claim_data['explanation'] = fact_check.explanation
-            claim_data['checked_via'] = fact_check.checked_via.value if fact_check.checked_via else None
-        else:
-            claim_data['verdict'] = None
-            claim_data['confidence_score'] = None
-            claim_data['explanation'] = None
-            claim_data['checked_via'] = None
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
         results.append(claim_data)
 

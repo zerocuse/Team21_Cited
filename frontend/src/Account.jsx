@@ -1,9 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-<<<<<<< HEAD
 import { useLocation } from 'react-router-dom'
 import { ReportSection, verdictIcon } from './shared/FactReport'
-=======
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 import './Account.css'
 
 const API = 'http://127.0.0.1:5001/auth'
@@ -11,10 +8,7 @@ const API = 'http://127.0.0.1:5001/auth'
 const BADGE_LABEL = { free: 'Free', premium: 'Premium', admin: 'Admin' }
 
 function Account() {
-<<<<<<< HEAD
   const location     = useLocation()
-=======
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
   const loginRef     = useRef()
   const fileInputRef = useRef()
   const [isLogin, setIsLogin]         = useState(true)
@@ -24,7 +18,6 @@ function Account() {
   const [avatarError, setAvatarError] = useState(false)
   const [authReady, setAuthReady]     = useState(false)
   const [history, setHistory]         = useState([])
-<<<<<<< HEAD
   const [expandedIds, setExpandedIds] = useState(new Set())
 
   const toggleExpand = (id) => {
@@ -44,9 +37,6 @@ function Account() {
   }
 
   // Re-runs on every navigation to /account so history stays fresh
-=======
-
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) { setAuthReady(true); return }
@@ -54,22 +44,11 @@ function Account() {
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
         setUser(data)
-<<<<<<< HEAD
         fetchHistory(token)
       })
       .catch(() => localStorage.removeItem('token'))
       .finally(() => setAuthReady(true))
   }, [location.pathname])
-=======
-        fetch(API + '/history', { headers: { 'Authorization': `Bearer ${token}` } })
-          .then(res => res.ok ? res.json() : [])
-          .then(data => setHistory(data))
-          .catch(() => {})
-      })
-      .catch(() => localStorage.removeItem('token'))
-      .finally(() => setAuthReady(true))
-  }, [])
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
 
   const [form, setForm] = useState({
     email: '', password: '', first_name: '', last_name: '', username: ''
@@ -110,10 +89,7 @@ function Account() {
       } else {
         localStorage.setItem('token', data.token)
         setUser(data.user)
-<<<<<<< HEAD
         fetchHistory(data.token)
-=======
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
         loginRef.current.close()
       }
     } catch {
@@ -215,18 +191,9 @@ function Account() {
           <div className="account-header-container">
             <h1 className="account-header">Account</h1>
             <button className="login-button" onClick={handleLogout}>Log Out</button>
-<<<<<<< HEAD
             {user.membership_status === 'admin' && (
   <a href="/admin" style={{ marginLeft: '1rem' }}>Admin Panel</a>
 )}
-=======
-<<<<<<< HEAD
-=======
-            {user.membership_status === 'admin' && (
-  <a href="/admin" style={{ marginLeft: '1rem' }}>Admin Panel</a>
-)}
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
->>>>>>> b4b76d097530c8680643f04192318097d3066a74
           </div>
 
           <div className="profile-card">
@@ -277,7 +244,6 @@ function Account() {
 
           <div className="history-section">
             <h3 className="history-header">History</h3>
-<<<<<<< HEAD
             <div className="history-list">
               {history.length === 0
                 ? <p style={{ color: '#aaa', fontSize: '0.9rem' }}>No queries yet.</p>
@@ -343,42 +309,6 @@ function Account() {
                     </div>
                   )
                 })
-=======
-            <div className="history-container">
-              {history.length === 0
-                ? <p style={{ color: '#aaa', fontSize: '0.9rem' }}>No queries yet.</p>
-                : history.map(item => (
-                  <div key={item.id} className="history-placeholder">
-                    <p style={{ fontWeight: 600, color: '#333', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-                      {item.claim_text.length > 100 ? item.claim_text.slice(0, 100) + '…' : item.claim_text}
-                    </p>
-                    {item.verdict && (
-                      <span style={{
-                        fontSize: '0.75rem',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        background: item.verdict === 'true' ? '#d4edda' : item.verdict === 'false' ? '#f8d7da' : '#fff3cd',
-                        color: item.verdict === 'true' ? '#155724' : item.verdict === 'false' ? '#721c24' : '#856404',
-                      }}>
-                        {item.verdict}
-                      </span>
-                    )}
-                    {item.explanation && (
-                      <p style={{ color: '#555', fontSize: '0.8rem', marginTop: '0.5rem' }}>
-                        {item.explanation}
-                      </p>
-                    )}
-                    {item.confidence_score && (
-                      <p style={{ color: '#888', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                        Confidence: {item.confidence_score}%
-                      </p>
-                    )}
-                    {item.queried_at && (
-                      <p style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '0.5rem' }}>{item.queried_at}</p>
-                    )}
-                  </div>
-                ))
->>>>>>> 5d53dfcd1b33041783090f1a2ec54fc222d96a0e
               }
             </div>
           </div>

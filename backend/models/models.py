@@ -167,4 +167,26 @@ class KnowledgeBaseEntry(db.Model):
         return f"<KnowledgeBaseEntry {self.content[:50]}... - Verdict: {self.verificationStatus}>"
 
 
+class UploadedFile(db.Model):
+    __tablename__ = 'uploaded_files'
+
+    fileID = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    userID = db.Column(db.Integer, db.ForeignKey('users.userID'), nullable=True)
+    original_filename = db.Column(db.String(255), nullable=False)
+    stored_filename = db.Column(db.String(255), nullable=False)
+    file_url = db.Column(db.String(500), nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    def __repr__(self):
+        return f"<UploadedFile {self.original_filename} by UserID {self.userID}>"
+
+    def to_dict(self):
+        return {
+            'fileID': self.fileID,
+            'original_filename': self.original_filename,
+            'file_url': self.file_url,
+            'uploaded_at': self.uploaded_at.strftime('%b %d, %Y') if self.uploaded_at else None,
+        }
+
+
     

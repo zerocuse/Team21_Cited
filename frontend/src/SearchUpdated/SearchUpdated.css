@@ -492,3 +492,31 @@
 
 
 
+
+
+/* Submitted file reference */
+.submitted-file-ref {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  background: var(--bg-secondary, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+.submitted-file-label {
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+}
+.submitted-file-link {
+  color: var(--accent, #2563eb);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.submitted-file-link:hover {
+  text-decoration: underline;
+}

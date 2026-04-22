@@ -12,10 +12,9 @@ function getSettings() {
 
 function SearchUpdated() {
 	const [input, setInput] = useState("");
-	const [files, setFiles] = useState([]);
-  	const fileInputRef = useRef(null);
 	const [uploadedFile, setUploadedFile] = useState(null);
 	const [results, setResults] = useState([]);
+	const [fileUrl, setFileUrl] = useState(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [word_count_error, set_word_count_Error] = useState("");
 	const [rejectionMsg, setRejectionMsg] = useState("");
@@ -34,6 +33,7 @@ function SearchUpdated() {
 		}
 		set_word_count_Error("");
 		setRejectionMsg("");
+		setFileUrl(null);
 		if (isLoading) return;
 
 		setIsLoading(true);
@@ -58,7 +58,9 @@ function SearchUpdated() {
 			}
 			if (!response.ok) throw new Error(`Server responded with ${response.status}`);
 			const data = await response.json();
-			setResults(Array.isArray(data) ? data : []);
+			const resultsArray = Array.isArray(data) ? data : (data.results || []);
+			setResults(resultsArray);
+			if (data.file_url) setFileUrl(data.file_url);
 			if ((s.autoScroll ?? false) && resultsRef.current) {
 				setTimeout(() => resultsRef.current.scrollIntoView({ behavior: 'smooth' }), 100);
 			}
@@ -86,20 +88,6 @@ function SearchUpdated() {
 		if (fileInput) fileInput.value = "";
 	};
 
-	const getFilePreview = (file) => {
-		if (file.type.startsWith("image/")) return URL.createObjectURL(file);
-		return null;
-	};
-	const FILE_LIMIT = 1;
-
-	const getFileIcon = (file) => {
-		if (file.type.startsWith("image/")) return null;
-		if (file.type.includes("pdf")) return "📄";
-		if (file.type.includes("word") || file.name.endsWith(".docx")) return "📝";
-		if (file.type.includes("sheet") || file.name.endsWith(".xlsx")) return "📊";
-		return "📎";
-	};
-
 	const handleKeyDown = (e) => {
 		if (e.key === "Enter") {
 			if (!e.shiftKey) {
@@ -113,40 +101,6 @@ function SearchUpdated() {
 	return (
 		<>
 			<form onSubmit={handleSubmit} className="search-container">
-				{/* File previews */}
-        {files.length > 0 && (
-          <>
-            <div className="file-previews">
-              {files.map((file, idx) => {
-                const preview = getFilePreview(file);
-                const icon = getFileIcon(file);
-                return (
-                  <div key={idx} className="file-chip">
-                    {preview ? (
-                      <img src={preview} alt={file.name} className="file-thumb" />
-                    ) : (
-                      <span className="file-icon">{icon}</span>
-                    )}
-                    <span className="file-name">{file.name}</span>
-                    <button
-                      type="button"
-                      className="file-remove"
-                      onClick={() => removeFile(idx)}
-                      aria-label="Remove file"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                      </svg>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-            <hr className="search-divider" />
-          </>
-        )}
-
 				<textarea
 					value={input}
 					onChange={handleInputChange}
@@ -172,6 +126,7 @@ function SearchUpdated() {
 						<input
 							id="file-upload"
 							type="file"
+							accept=".pdf,.docx,.doc,.txt,.pptx"
 							onChange={handleFileUpload}
 							style={{ display: "none" }}
 						/>
@@ -200,6 +155,16 @@ function SearchUpdated() {
 					</button>
 				</div>
 			</form>
+
+			{/* Submitted file reference */}
+			{fileUrl && (
+				<div className="submitted-file-ref">
+					<span className="submitted-file-label">Submitted file:</span>
+					<a href={fileUrl} target="_blank" rel="noreferrer" className="submitted-file-link">
+						{uploadedFile?.name || "Download"}
+					</a>
+				</div>
+			)}
 
 			{/* Results */}
 			<div className="results-list" ref={resultsRef}>

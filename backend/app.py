@@ -424,9 +424,10 @@ def _save_source_to_db(claim_id: int, url: str, title: str, info: str, source_ty
 @app.route('/fact-check', methods=['POST'])
 def handle_fact_check():
     import json as _json
-    query = request.form.get('query')
-    if not query:
-        return jsonify({"status": "error", "message": "No query"}), 400
+    import uuid as _uuid
+    from werkzeug.utils import secure_filename as _secure_filename
+
+    query = request.form.get('query', '')
 
     from routes.auth import _decode_token
     from services.claim_service import create_claim
@@ -437,6 +438,51 @@ def handle_fact_check():
     user_id = _decode_token(token) if token else None
 
     query = " ".join(query.split())
+
+    # ── Handle uploaded file ────────────────────────────────────────────────
+    file_url = None
+    _ALLOWED_DOC_EXTS = {'.pdf', '.docx', '.doc', '.txt', '.pptx'}
+
+    if 'file' in request.files:
+        uploaded = request.files['file']
+        if uploaded and uploaded.filename:
+            ext = os.path.splitext(_secure_filename(uploaded.filename))[1].lower()
+            if ext in _ALLOWED_DOC_EXTS:
+                stored_name = f"{_uuid.uuid4().hex}{ext}"
+                upload_dir = os.path.join(app.root_path, 'static', 'uploads')
+                os.makedirs(upload_dir, exist_ok=True)
+                save_path = os.path.join(upload_dir, stored_name)
+                uploaded.save(save_path)
+                file_url = f"http://127.0.0.1:5001/static/uploads/{stored_name}"
+
+                # Persist file record for authenticated users
+                if user_id:
+                    try:
+                        from models.models import UploadedFile as _UploadedFile
+                        file_record = _UploadedFile(
+                            userID=user_id,
+                            original_filename=_secure_filename(uploaded.filename),
+                            stored_filename=stored_name,
+                            file_url=file_url,
+                        )
+                        db.session.add(file_record)
+                        db.session.commit()
+                    except Exception as _e:
+                        print(f"Failed to save file record: {_e}")
+
+                # Extract text from file and merge into query
+                try:
+                    from services.extract_files import extract_text as _extract_text
+                    extracted = _extract_text(save_path).strip()
+                except Exception as _e:
+                    print(f"Failed to extract text from file: {_e}")
+                    extracted = ""
+
+                if extracted:
+                    query = f"{query}\n{extracted}".strip() if query else extracted
+
+    if not query:
+        return jsonify({"status": "error", "message": "No query"}), 400
 
     # ── Parse selected fact-check methods ───────────────────────────────────
     try:
@@ -516,7 +562,7 @@ def handle_fact_check():
             is_conclusive = has_google_verdict or (ai_result is not None)
             if not is_conclusive:
                 # Inconclusive — skip DB write entirely
-                return jsonify(all_results), 200
+                return jsonify({"results": all_results, "file_url": file_url}), 200
 
             claim_record = create_claim(query, user_id)
 
@@ -585,7 +631,7 @@ def handle_fact_check():
         except Exception as e:
             print(f"Failed to save claim/fact_check: {e}")
 
-    return jsonify(all_results), 200
+    return jsonify({"results": all_results, "file_url": file_url}), 200
 
 
 @app.cli.command("cleanup-inconclusive")

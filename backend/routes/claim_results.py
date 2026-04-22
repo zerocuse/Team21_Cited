@@ -36,3 +36,31 @@ def get_claim_result(claim_id):
 
 	except Exception:
 		return jsonify({"error": "Claim not found"}), 404
+
+@claim_results_bp.route('/api/claim/<claim_id>/diversity', methods=['GET'])
+def get_diversity(claim_id):
+    if not claim_id:
+        return jsonify({"error": "Claim ID is required"}), 400
+    try:
+        from models.source_diversity_analyzer import SourceDiversityAnalyzer
+        from models.models import Claim, db
+        claim = db.session.get(Claim, claim_id)
+        if not claim:
+            return jsonify({
+                "diversity_score": 0,
+                "is_single_source_biased": False,
+                "recommendations": []
+            }), 200
+        analyzer = SourceDiversityAnalyzer()
+        report = analyzer.generate_diversity_report()
+        return jsonify({
+            "diversity_score": report['diversity_score'],
+            "is_single_source_biased": report['is_single_source_biased'],
+            "recommendations": report['recommendations']
+        }), 200
+    except Exception:
+        return jsonify({
+            "diversity_score": 0,
+            "is_single_source_biased": False,
+            "recommendations": []
+        }), 200

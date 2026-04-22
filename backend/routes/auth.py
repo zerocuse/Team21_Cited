@@ -173,12 +173,15 @@ def history():
         )
 
         if fact_check:
-            claim_data['verdict']          = fact_check.verdict.value if fact_check.verdict else None
+            verdict_val = fact_check.verdict.value if fact_check.verdict else None
+            claim_data['verdict']          = verdict_val
+            claim_data['status']           = verdict_val  # ← this is what the frontend reads for the badge
             claim_data['confidence_score'] = fact_check.confidence_score
             claim_data['explanation']      = fact_check.explanation
             claim_data['checked_via']      = fact_check.checked_via.value if fact_check.checked_via else None
         else:
             claim_data['verdict']          = None
+            claim_data['status']           = None
             claim_data['confidence_score'] = None
             claim_data['explanation']      = None
             claim_data['checked_via']      = None

@@ -124,3 +124,45 @@ def start_service():
         return jsonify({"error": "Unauthorized"}), 403
     result = _admin_instance.start_service()
     return jsonify(result), 200
+
+@admin_bp.route('/api/admin/analytics', methods=['GET'])
+def get_analytics():
+    auth_header = request.headers.get('Authorization', '')
+    token = auth_header.removeprefix('Bearer ').strip()
+    if not token:
+        return jsonify({"error": "Unauthorized"}), 403
+    from flask import current_app
+    from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+    from models.models import User, db
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    try:
+        user_id = s.loads(token, salt='auth-token', max_age=60*60*24*30)
+        user = db.session.get(User, user_id)
+        if not user or user.to_dict().get('membership_status') != 'admin':
+            return jsonify({"error": "Unauthorized"}), 403
+    except (SignatureExpired, BadSignature):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    try:
+        from models.claim_analytics import ClaimAnalytics, ClaimRecord
+        from models.models import Claim
+        analytics = ClaimAnalytics()
+        claims = db.session.query(Claim).all()
+        for claim in claims:
+            record = ClaimRecord(
+                claim_id=str(claim.claimID),
+                user_id=str(claim.userID),
+                claim_text=claim.claim_text,
+                verified=claim.status == 'true',
+                submitted_at=claim.queried_at
+            )
+            analytics.add_claim(record)
+
+        return jsonify({
+            "total_claims": len(claims),
+            "trending_claims": analytics.get_trending_claims(),
+            "flagged_users": analytics.get_high_false_claim_users()
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": "Failed to load analytics"}), 500

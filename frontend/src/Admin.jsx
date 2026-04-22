@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+const token = localStorage.getItem('token');
+const authHeaders = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 function CreateUserForm({ onUserCreated }) {
   const [form, setForm] = useState({
     username: "", email: "", first_name: "", last_name: "", membership_status: "Free"
@@ -50,12 +52,19 @@ function Admin() {
   const [message, setMessage] = useState("");
   const [suspendDays, setSuspendDays] = useState(7);
   const [serviceRunning, setServiceRunning] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
 
 useEffect(() => {
   fetch("/api/admin/service/status")
     .then((res) => res.json())
     .then((data) => setServiceRunning(data.running))
     .catch(() => setServiceRunning(false));
+}, []);
+useEffect(() => {
+  fetch("/api/admin/analytics", { headers: authHeaders })
+    .then((res) => res.json())
+    .then((data) => setAnalytics(data))
+    .catch(() => setAnalytics(null));
 }, []);
 
 const toggleService = () => {
@@ -126,6 +135,22 @@ const toggleService = () => {
           </div>
         ))
       )}
+      {analytics && (
+  <div className="analytics-panel">
+    <h3>Analytics Summary</h3>
+    <p>Total Claims Submitted: {analytics.total_claims}</p>
+    <p>Trending Claims:</p>
+    {analytics.trending_claims.length === 0
+      ? <p>No trending claims.</p>
+      : <ul>{analytics.trending_claims.map((c, i) => <li key={i}>{c}</li>)}</ul>
+    }
+    <p>Flagged Users:</p>
+    {analytics.flagged_users.length === 0
+      ? <p>No flagged users.</p>
+      : <ul>{analytics.flagged_users.map((u, i) => <li key={i}>{u}</li>)}</ul>
+    }
+  </div>
+)}
       <CreateUserForm onUserCreated={(msg) => setMessage(msg)} />
     </div>
   );

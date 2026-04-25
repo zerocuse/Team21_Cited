@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import anthropic
 from difflib import SequenceMatcher
 from datetime import datetime, timedelta
+import re
 
 load_dotenv()
 app = Flask(__name__)
@@ -243,7 +244,10 @@ Return ONLY valid JSON:
         response = gemini_model.generate_content(prompt)
         raw_json = response.text.replace("```json", "").replace("```", "").strip()
         parsed = json.loads(raw_json)
-        parsed["source"] = "Gemini AI (Real-time Analysis)"
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if match:
+            parsed = json.loads(match.group())
+            parsed["source"] = "Gemini AI (Real-time Analysis)"
         return parsed
     except Exception as e:
         print(f"Gemini Real-time Analysis Error: {e}")
@@ -554,8 +558,8 @@ def handle_fact_check():
                 raw_claims = google_data.get('claims', [])
                 all_fact_checks.extend(raw_claims)
             except Exception as e:
-                print(f"Error fetching for variation '{variation}': {e}")
-                continue
+                print(f"❌ CLAUDE ERROR: {type(e).__name__} - {str(e)}") # This tells you if it's a 404, 429, or JSON error
+                return None
 
         # Remove duplicates
         seen_urls = set()
